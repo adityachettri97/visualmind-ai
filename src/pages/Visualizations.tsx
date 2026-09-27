@@ -43,10 +43,7 @@ function Visualizations() {
               </div>
 
               <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${Math.max(node.sizeFactor * 100, 4)}%`, backgroundColor: node.color }}
-                />
+                <div className="h-full rounded-full" style={{ width: `${Math.max(node.sizeFactor * 100, 4)}%`, backgroundColor: node.color }} />
               </div>
             </div>
           ))}

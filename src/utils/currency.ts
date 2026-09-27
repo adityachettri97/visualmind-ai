@@ -211,9 +211,10 @@ export function getCurrencyMetaForRegion(region: string | null | undefined): { c
   }
 
   const code = REGION_CURRENCY_CODES[region];
-  const symbol = new Intl.NumberFormat("en-US", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
-    .formatToParts(1)
-    .find((part) => part.type === "currency")?.value ?? code;
+  const symbol =
+    new Intl.NumberFormat("en-US", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
+      .formatToParts(1)
+      .find((part) => part.type === "currency")?.value ?? code;
 
   return { code, symbol };
 }

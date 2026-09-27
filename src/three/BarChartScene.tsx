@@ -69,13 +69,7 @@ function BarChartScene() {
               }}
             >
               <boxGeometry args={[2.1, barHeight, 1.8]} />
-              <meshStandardMaterial
-                color={color}
-                emissive={color}
-                emissiveIntensity={isSelected ? 0.45 : 0.18}
-                metalness={0.12}
-                roughness={0.28}
-              />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isSelected ? 0.45 : 0.18} metalness={0.12} roughness={0.28} />
             </mesh>
 
             <Text position={[0, -1.4, 0]} fontSize={0.3} color="#dbeafe" anchorX="center" anchorY="middle">

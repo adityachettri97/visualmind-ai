@@ -17,9 +17,27 @@ const app = express();
 // the login-location tracking in routes/auth.js) instead of the proxy's own address.
 app.set("trust proxy", 1);
 
-// credentials: true + an explicit origin (not "*") is required for the browser to send/accept
-// the httpOnly auth cookie across the 5173 (frontend) / 5000 (backend) port split.
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173", credentials: true }));
+// Allow both local development and the Netlify front-end origin, while still honoring a custom
+// Render-supplied CLIENT_ORIGIN for production. Requests with no Origin (curl/Postman/mobile)
+// are permitted as well, so the app works outside the browser.
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://visualmindai.netlify.app",
+  process.env.CLIENT_ORIGIN,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  }),
+);
 // Default express.json() limit is 100kb — a JSON-stringified CSV of any real size blows past
 // that, so /api/analyze failed with HTTP 413 before the request handler ever ran.
 app.use(express.json({ limit: "10mb" }));
@@ -440,6 +458,6 @@ app.get("/api/health", (req, res) => {
 // whatever it provides, not a fixed port, or the deployed service is unreachable.
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`VisualMind AI server running on port ${PORT}`);
 });

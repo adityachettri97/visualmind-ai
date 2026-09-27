@@ -8,7 +8,9 @@ function BarChart() {
     return <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">Upload a dataset to see a bar chart.</div>;
   }
 
-  const groups = summarizeByGroup(data, analysis).sort((a, b) => b.total - a.total).slice(0, 8);
+  const groups = summarizeByGroup(data, analysis)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8);
   const maxValue = Math.max(...groups.map((group) => group.total), 1);
 
   return (
