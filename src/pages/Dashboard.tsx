@@ -22,11 +22,13 @@ function Dashboard() {
       <div className="flex min-h-0 flex-1 overflow-hidden print:block print:h-auto">
         <Sidebar />
 
-        <main className="relative flex min-h-0 flex-1 min-w-0 flex-col gap-4 overflow-y-auto p-3 glass-scrollbar sm:p-4 lg:gap-5 lg:p-6 print:h-auto print:overflow-visible print:block print:p-0">
+        <main className="relative flex min-h-0 flex-1 min-w-0 flex-col gap-3 overflow-y-auto p-3 glass-scrollbar sm:p-4 lg:gap-4 lg:p-5 print:h-auto print:overflow-visible print:block print:p-0">
           {activePage === "dashboard" && (
             <>
-              <div className="flex flex-1 flex-col lg:flex-row gap-4 lg:gap-5">
-                <ThreeCanvas />
+              <div className="flex flex-1 flex-col gap-3 lg:min-h-0 lg:flex-row lg:items-stretch lg:gap-4">
+                <div className="lg:min-w-0 lg:flex-[1.7_1_0%]">
+                  <ThreeCanvas />
+                </div>
 
                 <InfoPanel />
 

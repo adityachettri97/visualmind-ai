@@ -17,22 +17,29 @@ const app = express();
 // the login-location tracking in routes/auth.js) instead of the proxy's own address.
 app.set("trust proxy", 1);
 
-// Allow both local development and the Netlify front-end origin, while still honoring a custom
+// Allow both local development and Netlify front-end origins, while still honoring a custom
 // Render-supplied CLIENT_ORIGIN for production. Requests with no Origin (curl/Postman/mobile)
 // are permitted as well, so the app works outside the browser.
-const allowedOrigins = [
+const allowedOrigins = new Set([
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://visualmindai.netlify.app",
+  "https://visualmind-ai.netlify.app",
   process.env.CLIENT_ORIGIN,
-].filter(Boolean);
+].filter(Boolean));
 
 app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+
+      const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
+      const isNetlify = /^https:\/\/([a-z0-9-]+\.)*netlify\.app$/.test(origin);
+
+      if (allowedOrigins.has(origin) || isLocalhost || isNetlify) {
         return callback(null, true);
       }
+
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -272,10 +279,7 @@ app.post("/api/chat", async (req, res) => {
           .slice(-6)
           .map((message) => ({
             role: message.role,
-            content:
-              message.content.length > MAX_HISTORY_MESSAGE_CHARS
-                ? `${message.content.slice(0, MAX_HISTORY_MESSAGE_CHARS)}…`
-                : message.content,
+            content: message.content.length > MAX_HISTORY_MESSAGE_CHARS ? `${message.content.slice(0, MAX_HISTORY_MESSAGE_CHARS)}…` : message.content,
           }))
       : [];
 

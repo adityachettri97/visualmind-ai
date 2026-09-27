@@ -24,7 +24,7 @@ function Scene({ barMode = false }: SceneProps) {
       shadows
       dpr={[1, 2]}
       camera={{
-        position: [0, 5, 12],
+        position: [0, 5, 18],
         fov: 50,
       }}
       style={{ touchAction: "none" }}
@@ -38,9 +38,9 @@ function Scene({ barMode = false }: SceneProps) {
         enableRotate
         enableDamping
         dampingFactor={0.08}
-        zoomSpeed={0.8}
-        minDistance={6}
-        maxDistance={26}
+        zoomSpeed={1.1}
+        minDistance={2.5}
+        maxDistance={60}
         mouseButtons={{ MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
       />
 
