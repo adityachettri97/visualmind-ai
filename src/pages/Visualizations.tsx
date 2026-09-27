@@ -1,5 +1,5 @@
 import { useDatasetStore } from "../store/datasetStore";
-import { datasetToGraph, summarizeByGroup } from "../utils/datasetToGraph";
+import { datasetToGraph, formatValue, summarizeByGroup } from "../utils/datasetToGraph";
 
 function Visualizations() {
   const { data, analysis, fileName } = useDatasetStore();
@@ -19,6 +19,7 @@ function Visualizations() {
   const nodes = datasetToGraph(data, analysis);
   const topNodes = [...nodes].sort((a, b) => b.sizeFactor - a.sizeFactor).slice(0, 10);
   const groups = summarizeByGroup(data, analysis);
+  const topGroups = [...groups].sort((a, b) => b.total - a.total).slice(0, 6);
   const maxGroupTotal = Math.max(...groups.map((group) => group.total), 1);
 
   return (
@@ -51,6 +52,29 @@ function Visualizations() {
           ))}
         </div>
       </div>
+
+      {topGroups.length > 0 && (
+        <div className="glass rounded-2xl p-4 sm:p-5 shrink-0">
+          <h3 className="text-lg font-semibold mb-4">Bar Chart</h3>
+
+          <div className="flex h-48 items-end gap-3 overflow-x-auto pb-2">
+            {topGroups.map((group) => (
+              <div key={group.group} className="flex min-w-[72px] flex-1 flex-col items-center justify-end gap-2">
+                <span className="text-center text-[10px] text-slate-400">{formatValue(analysis?.valueColumn ?? null, group.total)}</span>
+
+                <div className="flex h-32 w-full items-end justify-center rounded-t-xl bg-slate-800/70 p-1">
+                  <div
+                    className="w-full rounded-t-lg bg-gradient-to-t from-violet-600 via-violet-500 to-cyan-400"
+                    style={{ height: `${Math.max((group.total / maxGroupTotal) * 100, 12)}%` }}
+                  />
+                </div>
+
+                <span className="max-w-full truncate text-center text-xs text-slate-300">{group.group}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {groups.length > 0 && (
         <div className="glass rounded-2xl p-4 sm:p-5 shrink-0">

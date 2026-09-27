@@ -19,4 +19,4 @@ export interface GraphConnection {
   to: number;
 }
 
-export type VisualizationMode = "scatter" | "force" | "cluster" | "timeline" | "heatmap" | "treemap";
+export type VisualizationMode = "scatter" | "bar" | "force" | "cluster" | "timeline" | "heatmap" | "treemap";

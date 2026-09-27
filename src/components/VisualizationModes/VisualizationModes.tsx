@@ -7,6 +7,7 @@ import { useScrollFade } from "../../hooks/useScrollFade";
 
 const modes: { label: string; value: VisualizationMode }[] = [
   { label: "Scatter", value: "scatter" },
+  { label: "Bar", value: "bar" },
   { label: "Force", value: "force" },
   { label: "Cluster", value: "cluster" },
   { label: "Timeline", value: "timeline" },

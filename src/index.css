@@ -7,14 +7,33 @@ body,
   height: 100%;
 }
 
+html {
+  scrollbar-color: #5839b8 #0b0c16;
+}
+
 body {
   margin: 0;
   color: white;
-  overflow: hidden;
+  overflow: auto;
 
   background:
     radial-gradient(circle at top left, #312e81 0%, transparent 35%), radial-gradient(circle at bottom right, #0f766e 0%, transparent 35%),
     linear-gradient(135deg, #050816 0%, #0b1120 100%);
+}
+
+body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #0b0c16;
+  border-radius: 9999px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #5839b8;
+  border-radius: 9999px;
 }
 
 /* Printing (e.g. the Reports page's "Print / Export" button) only ever shows <main>'s content —

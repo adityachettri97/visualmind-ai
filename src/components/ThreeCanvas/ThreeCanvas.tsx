@@ -29,7 +29,9 @@ function ThreeCanvas() {
       {isNodeScene && <FilterBar />}
 
       {/* Active visualization */}
-      <div className="relative z-10 h-full w-full">{mode === "heatmap" ? <Heatmap /> : mode === "treemap" ? <Treemap /> : <Scene />}</div>
+      <div className="relative z-10 h-full w-full">
+        {mode === "bar" ? <Scene barMode={true} /> : mode === "heatmap" ? <Heatmap /> : mode === "treemap" ? <Treemap /> : <Scene />}
+      </div>
     </motion.div>
   );
 }

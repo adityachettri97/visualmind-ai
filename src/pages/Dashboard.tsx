@@ -16,13 +16,13 @@ function Dashboard() {
   const { activePage } = usePageStore();
 
   return (
-    <div className="h-screen bg-[#050816] text-white flex flex-col overflow-hidden print:h-auto print:overflow-visible print:block print:bg-white">
+    <div className="flex min-h-[100dvh] flex-col overflow-hidden bg-[#050816] text-white print:h-auto print:overflow-visible print:block print:bg-white">
       <Navbar />
 
-      <div className="flex flex-1 min-h-0 overflow-visible relative print:block print:h-auto">
+      <div className="flex min-h-0 flex-1 overflow-hidden print:block print:h-auto">
         <Sidebar />
 
-        <main className="flex-1 min-w-0 overflow-y-auto glass-scrollbar p-3 sm:p-4 lg:p-6 flex flex-col gap-4 lg:gap-5 print:h-auto print:overflow-visible print:block print:p-0">
+        <main className="relative flex min-h-0 flex-1 min-w-0 flex-col gap-4 overflow-y-auto p-3 glass-scrollbar sm:p-4 lg:gap-5 lg:p-6 print:h-auto print:overflow-visible print:block print:p-0">
           {activePage === "dashboard" && (
             <>
               <div className="flex flex-1 flex-col lg:flex-row gap-4 lg:gap-5">

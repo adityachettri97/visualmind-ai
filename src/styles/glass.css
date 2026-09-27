@@ -28,7 +28,8 @@
 /* Custom Glass Scrollbar */
 .glass-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.6) transparent;
+  scrollbar-color: #5839b8 #0b0c16;
+  scrollbar-gutter: stable;
 }
 
 /* Chrome, Edge, Safari */
@@ -38,17 +39,18 @@
 }
 
 .glass-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: #0b0c16;
+  border-radius: 9999px;
 }
 
 .glass-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.45);
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #5839b8;
+  border-radius: 9999px;
+  border: none;
 }
 
 .glass-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.8);
+  background: #6a4bd1;
 }
 
 .glass-scrollbar::-webkit-scrollbar-corner {

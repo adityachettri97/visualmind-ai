@@ -9,10 +9,14 @@ import Ground from "./Ground";
 import FloatingNodes from "./FloatingNodes";
 import Connections from "./Connections";
 import Effects from "./Effects";
-import ZoomToCursor from "./ZoomToCursor";
 import DragPan from "./DragPan";
+import BarChartScene from "./BarChartScene";
 
-function Scene() {
+interface SceneProps {
+  barMode?: boolean;
+}
+
+function Scene({ barMode = false }: SceneProps) {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
 
   return (
@@ -30,22 +34,25 @@ function Scene() {
       <OrbitControls
         ref={controlsRef}
         enablePan
-        enableZoom={false}
+        enableZoom
         enableRotate
+        enableDamping
+        dampingFactor={0.08}
+        zoomSpeed={0.8}
+        minDistance={6}
+        maxDistance={26}
         mouseButtons={{ MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
       />
-
-      <ZoomToCursor controlsRef={controlsRef} />
 
       <DragPan controlsRef={controlsRef} />
 
       {/* <CameraController /> */}
 
-      <Ground />
+      {!barMode && <Ground />}
 
-      <Connections />
-      {/* Temporary Cube */}
-      <FloatingNodes />
+      {!barMode && <Connections />}
+      {!barMode && <FloatingNodes />}
+      {barMode && <BarChartScene />}
       <Effects />
     </Canvas>
   );
