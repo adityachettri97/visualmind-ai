@@ -48,7 +48,7 @@ function Scene({ barMode = false }: SceneProps) {
 
       {/* <CameraController /> */}
 
-      {!barMode && <Ground />}
+      <Ground position={barMode ? [0, -2.85, 0] : [0, -1.5, 0]} />
 
       {!barMode && <Connections />}
       {!barMode && <FloatingNodes />}

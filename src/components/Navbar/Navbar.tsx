@@ -21,7 +21,7 @@ function Navbar() {
       variants={fadeInDown}
       initial="hidden"
       animate="visible"
-      className="glass relative z-40 h-16 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 print:hidden"
+      className="glass fixed inset-x-0 top-0 z-40 h-16 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 print:hidden"
     >
       {/* Logo */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">

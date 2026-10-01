@@ -1,16 +1,20 @@
 import { Grid } from "@react-three/drei";
 
-function Ground() {
+interface GroundProps {
+  position?: [number, number, number];
+}
+
+function Ground({ position = [0, -1.5, 0] }: GroundProps) {
   return (
     <Grid
-      position={[0, -1.5, 0]}
+      position={position}
       args={[40, 40]}
       cellSize={1}
-      cellThickness={0.5}
-      cellColor="#3b82f6"
+      cellThickness={0.35}
+      cellColor="#274276"
       sectionSize={5}
-      sectionThickness={1.5}
-      sectionColor="#8b5cf6"
+      sectionThickness={1.1}
+      sectionColor="#62459a"
       // The grid is fully invisible past fadeDistance from the camera's ground point (not just
       // dim — alpha hits exactly 0), and DragPan/ZoomToCursor let users roam freely to explore
       // large datasets. 50 units was too tight: panning/zooming out to see a big graph routinely
@@ -18,7 +22,7 @@ function Ground() {
       // followCamera keeps the (shader-side infinite) grid re-centered under wherever the camera
       // currently is, so the fade radius is never measured from a stale, panned-away origin.
       fadeDistance={150}
-      fadeStrength={1}
+      fadeStrength={1.15}
       infiniteGrid
       followCamera
     />

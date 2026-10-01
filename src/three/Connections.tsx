@@ -97,9 +97,9 @@ function Connections() {
   return (
     <>
       {sampledPairs.map(([node, neighbor]) => {
-        const dimmed = filterActive && !(nodeMatches(node) && nodeMatches(neighbor));
+        if (filterActive && !(nodeMatches(node) && nodeMatches(neighbor))) return null;
 
-        return <Connection key={`${node.id}-${neighbor.id}`} points={[node.position, neighbor.position]} dimmed={dimmed} />;
+        return <Connection key={`${node.id}-${neighbor.id}`} points={[node.position, neighbor.position]} />;
       })}
     </>
   );

@@ -16,14 +16,11 @@ interface FloatingNodeProps {
   isNotable: boolean;
   /** This node's category/region is the highest-total one. */
   isTopCategory: boolean;
-  /** A filter is active and this node doesn't match it — fade it out instead of hiding it, so
-      connection lines and overall layout stay legible while matches stand out. */
-  dimmed: boolean;
 }
 
 const SPHERE_RADIUS = 0.35;
 
-function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTopCategory, dimmed }: FloatingNodeProps) {
+function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTopCategory }: FloatingNodeProps) {
   const groupRef = useRef<THREE.Group>(null!);
   const target = useRef(new THREE.Vector3());
   const [hovered, setHovered] = useState(false);
@@ -69,22 +66,15 @@ function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTo
       <mesh>
         <sphereGeometry args={[SPHERE_RADIUS, 32, 32]} />
 
-        <meshStandardMaterial
-          color={node.color}
-          emissive={node.color}
-          emissiveIntensity={dimmed ? 0.15 : hovered || isSelected ? 3 : 1.8}
-          transparent={dimmed}
-          opacity={dimmed ? 0.15 : 1}
-        />
+        <meshStandardMaterial color={node.color} emissive={node.color} emissiveIntensity={hovered || isSelected ? 3 : 1.8} />
       </mesh>
 
       {/* Rings are additive, never replace the sphere's category color — a node can show
-          several at once (e.g. top performer that's also currently selected). Suppressed while
-          dimmed so filtered-out matches don't compete for attention with real matches. */}
-      {!dimmed && isTopPerformer && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#facc15" gap={1.35} />}
-      {!dimmed && !isTopPerformer && isBottomPerformer && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#f43f5e" gap={1.35} />}
-      {!dimmed && !isTopPerformer && !isBottomPerformer && isNotable && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#c084fc" gap={1.35} />}
-      {!dimmed && isTopCategory && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#38bdf8" gap={1.65} />}
+          several at once (e.g. top performer that's also currently selected). */}
+      {isTopPerformer && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#facc15" gap={1.35} />}
+      {!isTopPerformer && isBottomPerformer && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#f43f5e" gap={1.35} />}
+      {!isTopPerformer && !isBottomPerformer && isNotable && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#c084fc" gap={1.35} />}
+      {isTopCategory && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#38bdf8" gap={1.65} />}
       {(hovered || isSelected) && <HighlightRing sphereRadius={SPHERE_RADIUS} color="#ffffff" gap={1.95} />}
 
       {hovered && (

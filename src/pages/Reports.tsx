@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Printer } from "lucide-react";
+import type { jsPDF as JsPDF } from "jspdf";
 import { useDatasetStore } from "../store/datasetStore";
 import { computeValueTotal, formatValue, summarizeByGroup } from "../utils/datasetToGraph";
 
@@ -8,6 +9,87 @@ function Reports() {
   const hasData = data.length > 0;
   const total = hasData ? computeValueTotal(data, analysis) : 0;
   const groups = hasData ? summarizeByGroup(data, analysis) : [];
+
+  async function downloadPdf() {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(20);
+    pdf.text("VisualMind AI Report", 40, 48);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(fileName ?? "Dataset report", 40, 66);
+
+    autoTable(pdf, {
+      startY: 84,
+      head: [["Overview", "Value"]],
+      body: [
+        ["Rows", String(analysis?.rowCount ?? 0)],
+        ["Columns", String(analysis?.columnCount ?? 0)],
+        ["Total Value", formatValue(analysis?.valueColumn ?? null, total)],
+        ["Groups", String(groups.length)],
+      ],
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 9, cellPadding: 6 },
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+
+    let cursorY = (pdf as JsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 190;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    function addTextSection(title: string, items: string[]) {
+      if (items.length === 0) return;
+
+      if (cursorY > pageHeight - 60) {
+        pdf.addPage();
+        cursorY = 48;
+      }
+
+      cursorY += 24;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text(title, 40, cursorY);
+      cursorY += 18;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+
+      items.forEach((item) => {
+        const lines = pdf.splitTextToSize(`- ${item}`, pageWidth - 80);
+        const textHeight = lines.length * 14;
+
+        if (cursorY + textHeight > pageHeight - 40) {
+          pdf.addPage();
+          cursorY = 48;
+        }
+
+        pdf.text(lines, 40, cursorY);
+        cursorY += textHeight + 6;
+      });
+    }
+
+    addTextSection("AI Insights", aiAnalysis?.insights ?? []);
+    addTextSection("AI Recommendations", aiAnalysis?.recommendations ?? []);
+
+    if (groups.length > 0) {
+      autoTable(pdf, {
+        startY: cursorY + 12,
+        head: [["Group", "Items", "Total", "Share"]],
+        body: groups.map((group) => [
+          group.group,
+          String(group.count),
+          formatValue(analysis?.valueColumn ?? null, group.total),
+          total > 0 ? `${((group.total / total) * 100).toFixed(1)}%` : "-",
+        ]),
+        margin: { left: 40, right: 40 },
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: { fillColor: [79, 70, 229] },
+      });
+    }
+
+    pdf.save(`${fileName || "visualmind-report"}.pdf`);
+  }
 
   return (
     <div className="flex-1 overflow-y-auto glass-scrollbar flex flex-col gap-4 lg:gap-5">
@@ -19,12 +101,22 @@ function Reports() {
         </div>
 
         {hasData && (
-          <button
-            onClick={() => window.print()}
-            className="print:hidden rounded-lg bg-violet-600 px-4 py-2 hover:bg-violet-700 transition text-sm font-medium"
-          >
-            Print / Export
-          </button>
+          <div className="print:hidden flex flex-wrap gap-2">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 rounded-lg border border-slate-600 px-3 py-2 text-sm font-medium transition hover:bg-slate-700/70"
+            >
+              <Printer size={16} />
+              Print
+            </button>
+            <button
+              onClick={downloadPdf}
+              className="flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium transition hover:bg-violet-700"
+            >
+              <Download size={16} />
+              Download PDF
+            </button>
+          </div>
         )}
       </div>
 

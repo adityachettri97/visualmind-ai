@@ -85,11 +85,7 @@ function Sidebar() {
       <motion.aside
         variants={slideLeft}
         initial="hidden"
-        animate={
-          isDesktop
-            ? { width: isCollapsed ? 96 : 256, x: 0, opacity: 1 }
-            : { width: 288, x: isMobileOpen ? 0 : "-110%", opacity: 1 }
-        }
+        animate={isDesktop ? { width: isCollapsed ? 96 : 256, x: 0, opacity: 1 } : { width: 288, x: isMobileOpen ? 0 : "-110%", opacity: 1 }}
         transition={{
           duration: 0.3,
         }}
@@ -133,11 +129,7 @@ rounded-xl
 transition-all
 duration-300
 
-${
-  activePage === item.page
-    ? "bg-violet-600/20 border border-violet-500/30 text-violet-300"
-    : "hover:bg-violet-500/15 hover:text-violet-300"
-}
+${activePage === item.page ? "bg-violet-600/20 border border-violet-500/30 text-violet-300" : "hover:bg-violet-500/15 hover:text-violet-300"}
 ${collapsed ? "justify-center py-4 px-0" : "gap-3 px-4 py-3"}
 `}
                   >
@@ -194,15 +186,14 @@ ${collapsed ? "justify-center py-4 px-0" : "gap-3 px-4 py-3"}
                 <h3 className="font-semibold">Current Dataset</h3>
               </div>
 
-              <p className="text-sm text-slate-300">{fileName || "No dataset uploaded"}</p>
+              <p className="truncate text-sm text-slate-300" title={fileName || undefined}>
+                {fileName || "No dataset uploaded"}
+              </p>
 
               <p className="text-xs text-slate-500 mt-1">
                 {analysis ? `${analysis.rowCount.toLocaleString()} Rows • ${analysis.columnCount} Columns` : "No dataset available"}
               </p>
-              <button
-                onClick={() => handleNavigate("upload")}
-                className="mt-4 w-full rounded-lg bg-violet-600 py-2 transition hover:bg-violet-700"
-              >
+              <button onClick={() => handleNavigate("upload")} className="mt-4 w-full rounded-lg bg-violet-600 py-2 transition hover:bg-violet-700">
                 Change Dataset
               </button>
             </motion.div>

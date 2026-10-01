@@ -6,12 +6,21 @@ import { analyzeWithAI, generateDatasetWithAI } from "../../services/aiService";
 
 const MIN_ROWS = 3;
 const MAX_ROWS = 30;
+const DEFAULT_ROWS = 15;
+
+function normalizeRowCount(value: string): number {
+  const parsedValue = Number(value);
+
+  if (!value.trim() || !Number.isFinite(parsedValue)) return DEFAULT_ROWS;
+
+  return Math.min(MAX_ROWS, Math.max(MIN_ROWS, Math.round(parsedValue)));
+}
 
 function GenerateDataset() {
   const { setDataset, setAILoading, setAIAnalysis, setAIError } = useDatasetStore();
 
   const [prompt, setPrompt] = useState("");
-  const [rowCount, setRowCount] = useState(15);
+  const [rowCount, setRowCount] = useState(String(DEFAULT_ROWS));
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,9 +31,11 @@ function GenerateDataset() {
 
     setIsGenerating(true);
     setError(null);
+    const requestedRows = normalizeRowCount(rowCount);
+    setRowCount(String(requestedRows));
 
     try {
-      const { fileName, rows } = await generateDatasetWithAI(trimmedPrompt, rowCount);
+      const { fileName, rows } = await generateDatasetWithAI(trimmedPrompt, requestedRows);
       const newFileName = fileName.toLowerCase().endsWith(".csv") ? fileName : `${fileName}.csv`;
 
       setDataset(rows, newFileName, analyzeDataset(rows));
@@ -77,12 +88,10 @@ function GenerateDataset() {
             type="number"
             min={MIN_ROWS}
             max={MAX_ROWS}
+            step={1}
             value={rowCount}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-
-              setRowCount(Number.isFinite(value) ? Math.min(MAX_ROWS, Math.max(MIN_ROWS, value)) : MIN_ROWS);
-            }}
+            onChange={(event) => setRowCount(event.target.value)}
+            onBlur={() => setRowCount(String(normalizeRowCount(rowCount)))}
             disabled={isGenerating}
             className="mt-2 w-24 rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-violet-500 disabled:opacity-60"
           />
