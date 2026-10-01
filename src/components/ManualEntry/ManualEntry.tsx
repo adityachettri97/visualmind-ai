@@ -1,15 +1,22 @@
 import { useRef, useState } from "react";
-import { FilePlus2, Plus, Save, Trash2, X } from "lucide-react";
+import { Calculator, FilePlus2, Plus, Save, Trash2, X } from "lucide-react";
 import { useDatasetStore } from "../../store/datasetStore";
 import { analyzeDataset } from "../../utils/analyzeDataset";
 import { analyzeWithAI } from "../../services/aiService";
 import { useScrollFade } from "../../hooks/useScrollFade";
+import {
+  compileCalculatedFormula,
+  formulaReferencesColumn,
+  recalculateCalculatedColumns,
+  type CalculatedColumns,
+} from "../../utils/calculatedColumns";
 
 type ColumnType = "text" | "number" | "date";
 
 interface ColumnDef {
   name: string;
   type: ColumnType;
+  formula?: string;
 }
 
 const TYPE_LABELS: Record<ColumnType, string> = {
@@ -23,11 +30,13 @@ function ManualEntry() {
     data,
     fileName,
     analysis,
+    calculatedColumns,
     setDataset,
     appendRows,
     updateCell,
     deleteRow,
     addColumn: addColumnToDataset,
+    addCalculatedColumn: addCalculatedColumnToDataset,
     deleteColumn: deleteColumnFromDataset,
     setAILoading,
     setAIAnalysis,
@@ -46,6 +55,9 @@ function ManualEntry() {
   const [columnDefs, setColumnDefs] = useState<ColumnDef[]>([]);
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnType, setNewColumnType] = useState<ColumnType>("text");
+  const [newCalculatedColumnName, setNewCalculatedColumnName] = useState("");
+  const [newCalculatedFormula, setNewCalculatedFormula] = useState("");
+  const [calculatedColumnError, setCalculatedColumnError] = useState<string | null>(null);
   const [pendingRows, setPendingRows] = useState<Record<string, string>[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -105,7 +117,26 @@ function ManualEntry() {
   }
 
   function removeColumn(name: string) {
-    setColumnDefs((columns) => columns.filter((column) => column.name !== name));
+    setColumnDefs((columns) => {
+      const removed = new Set([name]);
+      let changed = true;
+
+      while (changed) {
+        changed = false;
+        columns.forEach((column) => {
+          if (
+            column.formula &&
+            !removed.has(column.name) &&
+            Array.from(removed).some((removedName) => formulaReferencesColumn(column.formula!, removedName))
+          ) {
+            removed.add(column.name);
+            changed = true;
+          }
+        });
+      }
+
+      return columns.filter((column) => !removed.has(column.name));
+    });
   }
 
   function addPendingRow() {
@@ -117,8 +148,54 @@ function ManualEntry() {
   }
 
   function updatePendingCell(rowIndex: number, columnName: string, value: string) {
-    setPendingRows((rows) => rows.map((row, index) => (index === rowIndex ? { ...row, [columnName]: value } : row)));
+    const formulas = Object.fromEntries(
+      columnDefs.filter((column) => column.formula).map((column) => [column.name, column.formula!]),
+    ) as CalculatedColumns;
+    setPendingRows((rows) =>
+      recalculateCalculatedColumns(
+        rows.map((row, index) => (index === rowIndex ? { ...row, [columnName]: value } : row)),
+        formulas,
+      ),
+    );
     setSaveError(null);
+  }
+
+  function handleAddCalculatedColumn() {
+    const name = newCalculatedColumnName.trim();
+    const formula = newCalculatedFormula.trim();
+    const columnNames = showBuilder ? columnDefs.map((column) => column.name) : (analysis?.columns ?? []);
+
+    if (!name || !formula) {
+      setCalculatedColumnError("Enter a column name and formula.");
+      return;
+    }
+
+    if (columnNames.includes(name)) {
+      setCalculatedColumnError(`A column named "${name}" already exists.`);
+      return;
+    }
+
+    try {
+      compileCalculatedFormula(formula, columnNames);
+
+      if (showBuilder) {
+        setColumnDefs((columns) => [...columns, { name, type: "number", formula }]);
+        setPendingRows((rows) =>
+          recalculateCalculatedColumns(rows.length > 0 ? rows : [{}], {
+            ...Object.fromEntries(columnDefs.filter((column) => column.formula).map((column) => [column.name, column.formula!])),
+            [name]: formula,
+          }),
+        );
+      } else {
+        addCalculatedColumnToDataset(name, formula);
+      }
+
+      setNewCalculatedColumnName("");
+      setNewCalculatedFormula("");
+      setCalculatedColumnError(null);
+    } catch (error) {
+      setCalculatedColumnError(error instanceof Error ? error.message : "Formula is invalid.");
+    }
   }
 
   function handleSaveTable() {
@@ -147,10 +224,14 @@ function ManualEntry() {
     const trimmedName = datasetName.trim() || "My Dataset";
     const newFileName = trimmedName.toLowerCase().endsWith(".csv") ? trimmedName : `${trimmedName}.csv`;
 
-    setDataset(rows, newFileName, analyzeDataset(rows));
+    const formulas = Object.fromEntries(
+      columnDefs.filter((column) => column.formula).map((column) => [column.name, column.formula!]),
+    ) as CalculatedColumns;
+    const calculatedRows = recalculateCalculatedColumns(rows, formulas);
+    setDataset(calculatedRows, newFileName, analyzeDataset(calculatedRows), formulas);
     setAILoading();
 
-    analyzeWithAI(rows)
+    analyzeWithAI(calculatedRows)
       .then((result) => setAIAnalysis(result))
       .catch((error) => {
         setAIError(error instanceof Error ? error.message : "Failed to analyze dataset with AI.");
@@ -159,6 +240,8 @@ function ManualEntry() {
     setDatasetName("");
     setColumnDefs([]);
     setPendingRows([]);
+    setNewCalculatedColumnName("");
+    setNewCalculatedFormula("");
     setSaveError(null);
     // The dataset that was just saved becomes the active one — drop back to the append view for it.
     setForceNewTable(false);
@@ -224,65 +307,111 @@ function ManualEntry() {
           </button>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <div className="min-w-40 flex-1">
+            <label htmlFor="active-calculated-column-name" className="text-xs font-medium text-slate-400">
+              Calculated column
+            </label>
+            <input
+              id="active-calculated-column-name"
+              type="text"
+              value={newCalculatedColumnName}
+              onChange={(event) => setNewCalculatedColumnName(event.target.value)}
+              placeholder="e.g. Profit"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-violet-500"
+            />
+          </div>
+          <div className="min-w-52 flex-[2]">
+            <label htmlFor="active-calculated-column-formula" className="text-xs font-medium text-slate-400">
+              Formula
+            </label>
+            <input
+              id="active-calculated-column-formula"
+              type="text"
+              value={newCalculatedFormula}
+              onChange={(event) => setNewCalculatedFormula(event.target.value)}
+              placeholder="[Revenue] - [Cost]"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-violet-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleAddCalculatedColumn}
+            className="flex items-center gap-1 rounded-lg border border-violet-500/50 px-3 py-2 text-sm font-medium text-violet-200 transition hover:bg-violet-500/10"
+          >
+            <Calculator size={15} />
+            Add Formula
+          </button>
+          {calculatedColumnError && (
+            <p role="alert" className="w-full text-sm text-red-400">
+              {calculatedColumnError}
+            </p>
+          )}
+          <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
+        </div>
+
         <div className="relative mt-4">
-        <div ref={scrollContainerRef} className="glass-scrollbar overflow-auto rounded-xl border border-slate-700">
-          <table ref={tableRef} className="w-full text-sm">
-            <thead className="bg-slate-800/60">
-              <tr>
-                {analysis.columns.map((column) => (
-                  <th key={column} className="px-3 py-2 text-left font-semibold text-slate-300">
-                    <div className="flex items-center gap-1.5">
-                      <span>{column}</span>
+          <div ref={scrollContainerRef} className="glass-scrollbar overflow-auto rounded-xl border border-slate-700">
+            <table ref={tableRef} className="w-full text-sm">
+              <thead className="bg-slate-800/60">
+                <tr>
+                  {analysis.columns.map((column) => (
+                    <th key={column} className="px-3 py-2 text-left font-semibold text-slate-300">
+                      <div className="flex items-center gap-1.5">
+                        <span title={calculatedColumns[column] ? `Formula: ${calculatedColumns[column]}` : undefined}>{column}</span>
+                        {calculatedColumns[column] && <span className="text-[10px] text-violet-300">ƒx</span>}
 
-                      <button
-                        type="button"
-                        onClick={() => deleteColumnFromDataset(column)}
-                        disabled={analysis.columns.length <= 1}
-                        aria-label={`Remove column ${column}`}
-                        className="ml-auto text-slate-500 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </th>
-                ))}
-
-                <th className="w-10" />
-              </tr>
-            </thead>
-
-            <tbody>
-              {data.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-t border-slate-700">
-                  {analysis.columns.map((column, colIndex) => (
-                    <td key={column} className="px-3 py-2">
-                      <input
-                        type={inputTypeFor(column)}
-                        value={row[column] ?? ""}
-                        onChange={(event) => updateCell(rowIndex, column, event.target.value)}
-                        onKeyDown={(event) => handleCellArrowNav(event, rowIndex, colIndex)}
-                        data-row={rowIndex}
-                        data-col={colIndex}
-                        className="w-full min-w-[8rem] rounded-md border border-transparent bg-slate-950/40 px-2 py-1.5 text-sm outline-none focus:border-violet-500"
-                      />
-                    </td>
+                        <button
+                          type="button"
+                          onClick={() => deleteColumnFromDataset(column)}
+                          disabled={analysis.columns.length <= 1}
+                          aria-label={`Remove column ${column}`}
+                          className="ml-auto text-slate-500 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </th>
                   ))}
 
-                  <td className="px-2 py-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => deleteRow(rowIndex)}
-                      aria-label={`Remove row ${rowIndex + 1}`}
-                      className="text-slate-500 hover:text-red-400"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
+                  <th className="w-10" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {data.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-t border-slate-700">
+                    {analysis.columns.map((column, colIndex) => (
+                      <td key={column} className="px-3 py-2">
+                        <input
+                          type={inputTypeFor(column)}
+                          value={row[column] ?? ""}
+                          onChange={(event) => updateCell(rowIndex, column, event.target.value)}
+                          onKeyDown={(event) => handleCellArrowNav(event, rowIndex, colIndex)}
+                          readOnly={Boolean(calculatedColumns[column])}
+                          title={calculatedColumns[column] ? `Calculated from ${calculatedColumns[column]}` : undefined}
+                          data-row={rowIndex}
+                          data-col={colIndex}
+                          className={`w-full min-w-[8rem] rounded-md border border-transparent px-2 py-1.5 text-sm outline-none focus:border-violet-500 ${calculatedColumns[column] ? "bg-violet-950/30 text-violet-100" : "bg-slate-950/40"}`}
+                        />
+                      </td>
+                    ))}
+
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => deleteRow(rowIndex)}
+                        aria-label={`Remove row ${rowIndex + 1}`}
+                        className="text-slate-500 hover:text-red-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Hints that the table scrolls — there's no visible scrollbar on touch devices to
               make the overflow obvious otherwise. */}
@@ -386,6 +515,49 @@ function ManualEntry() {
             Add Column
           </button>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <div className="min-w-40 flex-1">
+            <label htmlFor="builder-calculated-column-name" className="text-xs font-medium text-slate-400">
+              Calculated column
+            </label>
+            <input
+              id="builder-calculated-column-name"
+              type="text"
+              value={newCalculatedColumnName}
+              onChange={(event) => setNewCalculatedColumnName(event.target.value)}
+              placeholder="e.g. Profit"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-violet-500"
+            />
+          </div>
+          <div className="min-w-52 flex-[2]">
+            <label htmlFor="builder-calculated-column-formula" className="text-xs font-medium text-slate-400">
+              Formula
+            </label>
+            <input
+              id="builder-calculated-column-formula"
+              type="text"
+              value={newCalculatedFormula}
+              onChange={(event) => setNewCalculatedFormula(event.target.value)}
+              placeholder="[Revenue] - [Cost]"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-violet-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleAddCalculatedColumn}
+            className="flex items-center gap-1 rounded-lg border border-violet-500/50 px-3 py-2 text-sm font-medium text-violet-200 transition hover:bg-violet-500/10"
+          >
+            <Calculator size={15} />
+            Add Formula
+          </button>
+          {calculatedColumnError && (
+            <p role="alert" className="w-full text-sm text-red-400">
+              {calculatedColumnError}
+            </p>
+          )}
+          <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
+        </div>
       </div>
 
       {columnDefs.length > 0 && (
@@ -393,67 +565,70 @@ function ManualEntry() {
           <p className="mb-2 text-sm font-medium text-slate-300">Table</p>
 
           <div className="relative">
-          <div ref={scrollContainerRef} className="glass-scrollbar overflow-auto rounded-xl border border-slate-700">
-            <table ref={tableRef} className="w-full text-sm">
-              <thead className="bg-slate-800/60">
-                <tr>
-                  {columnDefs.map((column) => (
-                    <th key={column.name} className="px-3 py-2 text-left font-semibold text-slate-300">
-                      <div className="flex items-center gap-1.5">
-                        <span>{column.name}</span>
+            <div ref={scrollContainerRef} className="glass-scrollbar overflow-auto rounded-xl border border-slate-700">
+              <table ref={tableRef} className="w-full text-sm">
+                <thead className="bg-slate-800/60">
+                  <tr>
+                    {columnDefs.map((column) => (
+                      <th key={column.name} className="px-3 py-2 text-left font-semibold text-slate-300">
+                        <div className="flex items-center gap-1.5">
+                          <span title={column.formula ? `Formula: ${column.formula}` : undefined}>{column.name}</span>
+                          {column.formula && <span className="text-[10px] text-violet-300">ƒx</span>}
 
-                        <span className="rounded bg-slate-700/60 px-1.5 py-0.5 text-[10px] font-normal text-slate-400">
-                          {TYPE_LABELS[column.type]}
-                        </span>
+                          <span className="rounded bg-slate-700/60 px-1.5 py-0.5 text-[10px] font-normal text-slate-400">
+                            {TYPE_LABELS[column.type]}
+                          </span>
 
-                        <button
-                          type="button"
-                          onClick={() => removeColumn(column.name)}
-                          aria-label={`Remove column ${column.name}`}
-                          className="ml-auto text-slate-500 hover:text-red-400"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </th>
-                  ))}
-
-                  <th className="w-10" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {pendingRows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="border-t border-slate-700">
-                    {columnDefs.map((column, colIndex) => (
-                      <td key={column.name} className="px-3 py-2">
-                        <input
-                          type={column.type === "number" ? "number" : column.type === "date" ? "date" : "text"}
-                          value={row[column.name] ?? ""}
-                          onChange={(event) => updatePendingCell(rowIndex, column.name, event.target.value)}
-                          onKeyDown={(event) => handleCellArrowNav(event, rowIndex, colIndex)}
-                          data-row={rowIndex}
-                          data-col={colIndex}
-                          className="w-full min-w-[8rem] rounded-md border border-transparent bg-slate-950/40 px-2 py-1.5 text-sm outline-none focus:border-violet-500"
-                        />
-                      </td>
+                          <button
+                            type="button"
+                            onClick={() => removeColumn(column.name)}
+                            aria-label={`Remove column ${column.name}`}
+                            className="ml-auto text-slate-500 hover:text-red-400"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </th>
                     ))}
 
-                    <td className="px-2 py-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removePendingRow(rowIndex)}
-                        aria-label={`Remove row ${rowIndex + 1}`}
-                        className="text-slate-500 hover:text-red-400"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
+                    <th className="w-10" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {pendingRows.map((row, rowIndex) => (
+                    <tr key={rowIndex} className="border-t border-slate-700">
+                      {columnDefs.map((column, colIndex) => (
+                        <td key={column.name} className="px-3 py-2">
+                          <input
+                            type={column.type === "number" ? "number" : column.type === "date" ? "date" : "text"}
+                            value={row[column.name] ?? ""}
+                            onChange={(event) => updatePendingCell(rowIndex, column.name, event.target.value)}
+                            onKeyDown={(event) => handleCellArrowNav(event, rowIndex, colIndex)}
+                            readOnly={Boolean(column.formula)}
+                            title={column.formula ? `Calculated from ${column.formula}` : undefined}
+                            data-row={rowIndex}
+                            data-col={colIndex}
+                            className={`w-full min-w-[8rem] rounded-md border border-transparent px-2 py-1.5 text-sm outline-none focus:border-violet-500 ${column.formula ? "bg-violet-950/30 text-violet-100" : "bg-slate-950/40"}`}
+                          />
+                        </td>
+                      ))}
+
+                      <td className="px-2 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removePendingRow(rowIndex)}
+                          aria-label={`Remove row ${rowIndex + 1}`}
+                          className="text-slate-500 hover:text-red-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Hints that the table scrolls — there's no visible scrollbar on touch devices to
                 make the overflow obvious otherwise. */}

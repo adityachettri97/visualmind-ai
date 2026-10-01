@@ -8,9 +8,9 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
 
 function pushToRemote() {
-  const { data, fileName, analysis, aiAnalysis, history } = useDatasetStore.getState();
+  const { data, fileName, analysis, aiAnalysis, calculatedColumns, history } = useDatasetStore.getState();
 
-  saveRemoteDataset({ data, fileName, analysis, aiAnalysis, history }).catch((error) => {
+  saveRemoteDataset({ data, fileName, analysis, aiAnalysis, calculatedColumns, history }).catch((error) => {
     console.error("Failed to save your data to your account:", error);
   });
 }

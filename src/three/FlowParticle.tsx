@@ -1,6 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+import { useThemeStore } from "../store/themeStore";
 
 interface Props {
   start: [number, number, number];
@@ -19,6 +20,7 @@ const PHASE_OFFSET = 1000;
  * connection".
  */
 function FlowParticle({ start, end, speed = 0.35 }: Props) {
+  const isLightTheme = useThemeStore((state) => state.theme === "light");
   const refs = useRef<(THREE.Mesh | null)[]>([]);
 
   useFrame(({ clock }) => {
@@ -49,9 +51,9 @@ function FlowParticle({ start, end, speed = 0.35 }: Props) {
           <sphereGeometry args={[0.11 - i * 0.018, 12, 12]} />
 
           <meshStandardMaterial
-            color="#ffffff"
-            emissive="#a78bfa"
-            emissiveIntensity={14 - i * 2.4}
+            color={isLightTheme ? "#4c1d95" : "#ffffff"}
+            emissive={isLightTheme ? "#7c3aed" : "#a78bfa"}
+            emissiveIntensity={isLightTheme ? 5 - i * 0.8 : 14 - i * 2.4}
             transparent
             opacity={1 - i * 0.18}
           />

@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { User } from "../models/User.js";
 
 const COOKIE_NAME = "token";
 const TOKEN_TTL = "30d";
@@ -29,19 +30,29 @@ export function clearAuthCookie(res) {
   res.clearCookie(COOKIE_NAME, cookieOptions);
 }
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const token = req.cookies?.[COOKIE_NAME];
 
   if (!token) {
     return res.status(401).json({ error: "Not signed in." });
   }
 
+  let payload;
+
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: "Your session has expired. Please sign in again." });
+  }
+
+  try {
+    const userExists = await User.exists({ _id: payload.userId });
+
+    if (!userExists) return res.status(401).json({ error: "This account no longer exists." });
 
     req.userId = payload.userId;
     next();
-  } catch {
-    return res.status(401).json({ error: "Your session has expired. Please sign in again." });
+  } catch (error) {
+    next(error);
   }
 }

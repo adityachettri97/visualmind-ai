@@ -2,6 +2,8 @@ import express from "express";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
+import { Dataset } from "../models/Dataset.js";
+import { ChatHistory } from "../models/ChatHistory.js";
 import { signToken, setAuthCookie, clearAuthCookie, requireAuth } from "../middleware/auth.js";
 import { isValidPassword, PASSWORD_REQUIREMENTS_MESSAGE } from "../utils/password.js";
 import { resolveCountry, clientIp } from "../utils/geo.js";
@@ -107,6 +109,43 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (req, res) => {
   clearAuthCookie(res);
   res.json({ ok: true });
+});
+
+router.delete("/account", requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, confirmation } = req.body;
+
+    if (typeof currentPassword !== "string" || !currentPassword) {
+      return res.status(400).json({ error: "Enter your current password to delete your account." });
+    }
+
+    if (confirmation !== "DELETE") {
+      return res.status(400).json({ error: "Type DELETE exactly to confirm account removal." });
+    }
+
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ error: "This account no longer exists." });
+    }
+
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return res.status(401).json({ error: "Your current password is incorrect." });
+    }
+
+    await Dataset.deleteOne({ userId: user._id });
+    await ChatHistory.deleteOne({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+
+    clearAuthCookie(res);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("===== ACCOUNT DELETION ERROR =====");
+    console.error(error);
+
+    res.status(500).json({ error: "Failed to delete your account. Please try again." });
+  }
 });
 
 router.get("/me", requireAuth, async (req, res) => {

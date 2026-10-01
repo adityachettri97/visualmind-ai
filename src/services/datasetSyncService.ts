@@ -1,6 +1,7 @@
 import type { AIAnalysis } from "./aiService";
 import type { DatasetAnalysis, DatasetHistoryEntry } from "../store/datasetStore";
 import { API_BASE_URL } from "../config";
+import type { CalculatedColumns } from "../utils/calculatedColumns";
 
 const API_BASE = `${API_BASE_URL}/api/dataset`;
 
@@ -9,6 +10,7 @@ export interface RemoteDatasetState {
   fileName: string | null;
   analysis: DatasetAnalysis | null;
   aiAnalysis: AIAnalysis | null;
+  calculatedColumns: CalculatedColumns;
   history: DatasetHistoryEntry[];
 }
 

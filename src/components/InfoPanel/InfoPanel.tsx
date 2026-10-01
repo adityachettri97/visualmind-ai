@@ -28,7 +28,7 @@ function InfoPanel() {
           transition={{
             duration: 0.35,
           }}
-          className="glass-scrollbar absolute left-4 right-4 top-4 z-50 max-h-[50vh] overflow-y-auto rounded-[22px] border border-slate-700/80 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.14),transparent_48%),rgba(7,19,38,0.96)] p-4 shadow-[0_24px_80px_rgba(2,6,23,0.9)] backdrop-blur-xl before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-cyan-300/70 before:to-transparent sm:left-auto sm:right-6 sm:top-6 sm:w-[20rem] sm:max-h-[85vh] sm:p-6"
+          className="record-info-panel glass-scrollbar absolute left-4 right-4 top-4 z-50 max-h-[50vh] overflow-y-auto rounded-[22px] border border-slate-700/80 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.14),transparent_48%),rgba(7,19,38,0.96)] p-4 shadow-[0_24px_80px_rgba(2,6,23,0.9)] backdrop-blur-xl before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-cyan-300/70 before:to-transparent sm:left-auto sm:right-6 sm:top-6 sm:w-[20rem] sm:max-h-[85vh] sm:p-6"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

@@ -45,6 +45,188 @@ body::-webkit-scrollbar-thumb {
   border-radius: 9999px;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  scrollbar-color: #94a3b8 #e8edf4;
+  --app-background: #f2f5fa;
+  --app-text: #182235;
+  --app-muted: #526177;
+  --app-surface: #ffffff;
+  --app-surface-muted: #edf2f8;
+  --app-border: #d4deea;
+}
+
+html[data-theme="light"],
+html[data-theme="light"] body {
+  scrollbar-color: #94a3b8 #e8edf4;
+}
+
+html[data-theme="light"]::-webkit-scrollbar,
+html[data-theme="light"] body::-webkit-scrollbar {
+  background: #e8edf4;
+}
+
+html[data-theme="light"]::-webkit-scrollbar-track,
+html[data-theme="light"] body::-webkit-scrollbar-track {
+  background: #e8edf4;
+}
+
+html[data-theme="light"]::-webkit-scrollbar-thumb,
+html[data-theme="light"] body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 1px solid #e8edf4;
+  border-radius: 9999px;
+}
+
+:root[data-theme="light"] body {
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at top left, #dce8fb 0%, transparent 36%), radial-gradient(circle at bottom right, #d9f0eb 0%, transparent 34%),
+    linear-gradient(135deg, #f7f9fc 0%, var(--app-background) 100%);
+}
+
+[data-theme="light"] .glass {
+  color: var(--app-text);
+  background: rgb(255 255 255 / 82%);
+  border-color: var(--app-border);
+  box-shadow:
+    0 8px 28px rgb(30 50 80 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 95%);
+}
+
+[data-theme="light"] .visualization-canvas {
+  background: linear-gradient(145deg, #c7d2e1 0%, #d4dce8 52%, #c4d1df 100%) !important;
+}
+
+[data-theme="light"] .visualization-canvas > div:first-child {
+  opacity: 0.08;
+}
+
+[data-theme="light"] .visualization-canvas > div:nth-child(2) {
+  opacity: 0.1;
+}
+
+[data-theme="light"] .visualization-canvas > div:nth-child(3) {
+  opacity: 0.12;
+}
+
+[data-theme="light"] .glass-scrollbar {
+  scrollbar-color: #94a3b8 #e8edf4;
+}
+
+[data-theme="light"] .glass-scrollbar::-webkit-scrollbar-track,
+[data-theme="light"] body::-webkit-scrollbar-track {
+  background: #e8edf4;
+}
+
+[data-theme="light"] .glass-scrollbar::-webkit-scrollbar-thumb,
+[data-theme="light"] body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
+
+[data-theme="light"] [class*="bg-[#050816]"] {
+  background: var(--app-background) !important;
+}
+
+[data-theme="light"] [class*="bg-[#0B1220]"],
+[data-theme="light"] [class*="bg-[#131C31]"],
+[data-theme="light"] [class*="bg-[#071326]"],
+[data-theme="light"] [class*="bg-slate-950"],
+[data-theme="light"] [class*="bg-slate-900"],
+[data-theme="light"] [class*="bg-slate-800"] {
+  background: var(--app-surface-muted) !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--app-text) !important;
+}
+
+[data-theme="light"] [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+[data-theme="light"] [class*="text-slate-400"] {
+  color: #475569 !important;
+}
+
+[data-theme="light"] [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+[data-theme="light"] [class*="border-slate-700"],
+[data-theme="light"] [class*="border-slate-800"],
+[data-theme="light"] [class*="border-slate-900"],
+[data-theme="light"] [class*="border-white/"] {
+  border-color: var(--app-border) !important;
+}
+
+[data-theme="light"] .bg-violet-600.text-white,
+[data-theme="light"] .bg-violet-700.text-white,
+[data-theme="light"] button.bg-violet-600,
+[data-theme="light"] button.bg-violet-700 {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: var(--app-text);
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #64748b;
+}
+
+[data-theme="light"] .record-info-panel .text-cyan-200 {
+  color: #0e7490 !important;
+}
+
+[data-theme="light"] .record-info-panel [class*="bg-cyan-300"] {
+  background: rgb(8 145 178 / 14%) !important;
+}
+
+[data-theme="light"] .record-info-panel .text-cyan-200\/80 {
+  color: #0e7490 !important;
+}
+
+[data-theme="light"] .record-info-panel {
+  color: #182235;
+  border-color: #cbd5e1 !important;
+  background: linear-gradient(145deg, #ffffff 0%, #edf3fa 100%) !important;
+  box-shadow: 0 24px 64px rgb(30 41 59 / 24%);
+}
+
+[data-theme="light"] .delete-account-panel {
+  color: #3f1720;
+  border-color: #fda4af !important;
+  background: #fff1f2 !important;
+}
+
+[data-theme="light"] .delete-account-panel input {
+  border-color: #fda4af !important;
+  background: #ffffff !important;
+}
+
+[data-theme="light"] .node-tooltip {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: #7c3aed !important;
+}
+
+[data-theme="light"] .visualization-canvas button.bg-white {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .border-red-500\/40 + p,
+[data-theme="light"] .text-red-300 {
+  color: #991b1b !important;
+}
+
+[data-theme="light"] button.bg-red-700 {
+  color: #ffffff !important;
+}
+
 /* Printing (e.g. the Reports page's "Print / Export" button) only ever shows <main>'s content —
    Navbar/Sidebar carry their own print:hidden classes. The dark glass theme reads as illegible
    near-black-on-black on paper, so swap it for a plain light document look here. */

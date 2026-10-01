@@ -24,6 +24,9 @@ const allowedOrigins = new Set(
   [
     "http://localhost:5173",
     "http://localhost:5174",
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
     "https://visualmindai.netlify.app",
     "https://visualmind-ai.netlify.app",
     "https://visualmind-ai-sable.vercel.app",
@@ -37,9 +40,10 @@ app.use(
       if (!origin) return callback(null, true);
 
       const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
+      const isNativeShell = ["https://localhost", "http://localhost", "capacitor://localhost"].includes(origin);
       const isNetlify = /^https:\/\/([a-z0-9-]+\.)*netlify\.app$/.test(origin);
 
-      if (allowedOrigins.has(origin) || isLocalhost || isNetlify) {
+      if (allowedOrigins.has(origin) || isLocalhost || isNativeShell || isNetlify) {
         return callback(null, true);
       }
 

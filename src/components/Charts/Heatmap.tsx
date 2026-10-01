@@ -1,10 +1,12 @@
 import { useDatasetStore } from "../../store/datasetStore";
 import { useNodeStore } from "../../store/nodeStore";
 import { datasetToGraph } from "../../utils/datasetToGraph";
+import { useThemeStore } from "../../store/themeStore";
 
 function Heatmap() {
   const { data, analysis } = useDatasetStore();
   const { selectedNode, setSelectedNode } = useNodeStore();
+  const isLightTheme = useThemeStore((state) => state.theme === "light");
 
   if (!data || data.length === 0) {
     return <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">Upload a dataset to see a heatmap.</div>;
@@ -30,9 +32,9 @@ function Heatmap() {
             }`}
             style={{ backgroundColor: node.color, opacity: intensity }}
           >
-            <span className="w-full truncate text-xs font-semibold text-white">{node.label}</span>
+            <span className={`w-full truncate text-xs font-semibold ${isLightTheme ? "text-slate-900" : "text-white"}`}>{node.label}</span>
 
-            <span className="w-full truncate text-[10px] text-white/80">{node.value}</span>
+            <span className={`w-full truncate text-[10px] ${isLightTheme ? "text-slate-800" : "text-white/80"}`}>{node.value}</span>
           </button>
         );
       })}

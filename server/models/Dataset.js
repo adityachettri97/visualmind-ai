@@ -26,6 +26,10 @@ const datasetSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null,
   },
+  calculatedColumns: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
+  },
   history: {
     type: [mongoose.Schema.Types.Mixed],
     default: [],

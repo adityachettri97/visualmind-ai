@@ -11,7 +11,7 @@ router.get("/", async (req, res) => {
     const doc = await Dataset.findOne({ userId: req.userId });
 
     if (!doc) {
-      return res.json({ data: [], fileName: null, analysis: null, aiAnalysis: null, history: [] });
+      return res.json({ data: [], fileName: null, analysis: null, aiAnalysis: null, calculatedColumns: {}, history: [] });
     }
 
     res.json({
@@ -19,6 +19,7 @@ router.get("/", async (req, res) => {
       fileName: doc.fileName,
       analysis: doc.analysis,
       aiAnalysis: doc.aiAnalysis,
+      calculatedColumns: doc.calculatedColumns ?? {},
       history: doc.history,
     });
   } catch (error) {
@@ -31,7 +32,7 @@ router.get("/", async (req, res) => {
 
 router.put("/", async (req, res) => {
   try {
-    const { data, fileName, analysis, aiAnalysis, history } = req.body;
+    const { data, fileName, analysis, aiAnalysis, calculatedColumns, history } = req.body;
 
     await Dataset.findOneAndUpdate(
       { userId: req.userId },
@@ -40,6 +41,7 @@ router.put("/", async (req, res) => {
         fileName: typeof fileName === "string" ? fileName : null,
         analysis: analysis ?? null,
         aiAnalysis: aiAnalysis ?? null,
+        calculatedColumns: calculatedColumns && typeof calculatedColumns === "object" ? calculatedColumns : {},
         history: Array.isArray(history) ? history : [],
         updatedAt: new Date(),
       },

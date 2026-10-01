@@ -55,10 +55,17 @@ export async function logout(): Promise<void> {
   await authFetch("/logout", { method: "POST" });
 }
 
+export async function deleteAccount(currentPassword: string, confirmation: string): Promise<void> {
+  await authFetch("/account", {
+    method: "DELETE",
+    body: JSON.stringify({ currentPassword, confirmation }),
+  });
+}
+
 /** Returns the signed-in user from the session cookie, or null if not signed in / cookie expired. */
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
-    const result = await authFetch<{ user: AuthUser }>("/me");
+    const result = await authFetch<{ user: AuthUser }>("/me", { signal: AbortSignal.timeout(60_000) });
 
     return result.user;
   } catch {

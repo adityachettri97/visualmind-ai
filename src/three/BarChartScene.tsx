@@ -4,6 +4,7 @@ import { useNodeStore } from "../store/nodeStore";
 import { summarizeByGroup, formatValue } from "../utils/datasetToGraph";
 import { getCurrencySymbolForRegion } from "../utils/currency";
 import { useAuthStore } from "../store/authStore";
+import { useThemeStore } from "../store/themeStore";
 
 const BAR_COLORS = ["#8b5cf6", "#22d3ee", "#a78bfa", "#34d399", "#f59e0b", "#f472b6"];
 
@@ -11,6 +12,7 @@ function BarChartScene() {
   const { data, analysis } = useDatasetStore();
   const { selectedNode, setSelectedNode } = useNodeStore();
   const userRegion = useAuthStore((state) => state.user?.region ?? null);
+  const isLightTheme = useThemeStore((state) => state.theme === "light");
 
   if (!data || data.length === 0) {
     return null;
@@ -72,11 +74,11 @@ function BarChartScene() {
               <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isSelected ? 0.45 : 0.18} metalness={0.12} roughness={0.28} />
             </mesh>
 
-            <Text position={[0, -1.4, 0]} fontSize={0.3} color="#dbeafe" anchorX="center" anchorY="middle">
+            <Text position={[0, -1.4, 0]} fontSize={0.3} color={isLightTheme ? "#1e293b" : "#dbeafe"} anchorX="center" anchorY="middle">
               {group.group}
             </Text>
 
-            <Text position={[0, barHeight + 0.62, 0]} fontSize={0.24} color="#f8fafc" anchorX="center" anchorY="middle">
+            <Text position={[0, barHeight + 0.62, 0]} fontSize={0.24} color={isLightTheme ? "#1e293b" : "#f8fafc"} anchorX="center" anchorY="middle">
               {valueText}
             </Text>
 

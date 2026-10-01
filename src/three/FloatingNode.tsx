@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useNodeStore } from "../store/nodeStore";
 import type { GraphNode } from "../types/graph";
 import HighlightRing from "./HighlightRing";
+import { useThemeStore } from "../store/themeStore";
 
 interface FloatingNodeProps {
   node: GraphNode;
@@ -25,6 +26,7 @@ function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTo
   const target = useRef(new THREE.Vector3());
   const [hovered, setHovered] = useState(false);
   const { selectedNode, setSelectedNode } = useNodeStore();
+  const isLightTheme = useThemeStore((state) => state.theme === "light");
   const isSelected = selectedNode?.id === node.id;
 
   const baseScale = 0.7 + node.sizeFactor * 0.8;
@@ -63,6 +65,13 @@ function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTo
       }}
       onClick={() => setSelectedNode(node)}
     >
+      {isLightTheme && (
+        <mesh>
+          <sphereGeometry args={[SPHERE_RADIUS * 1.12, 24, 24]} />
+          <meshBasicMaterial color="#334155" side={THREE.BackSide} />
+        </mesh>
+      )}
+
       <mesh>
         <sphereGeometry args={[SPHERE_RADIUS, 32, 32]} />
 
@@ -79,7 +88,7 @@ function FloatingNode({ node, isTopPerformer, isBottomPerformer, isNotable, isTo
 
       {hovered && (
         <Html distanceFactor={8}>
-          <div className="rounded-lg bg-slate-900/90 border border-violet-500 px-3 py-2 text-white text-sm whitespace-nowrap shadow-xl">
+          <div className="node-tooltip rounded-lg bg-slate-900/90 border border-violet-500 px-3 py-2 text-white text-sm whitespace-nowrap shadow-xl">
             {node.label}
           </div>
         </Html>

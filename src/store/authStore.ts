@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   fetchCurrentUser,
+  deleteAccount as deleteAccountRequest,
   forgotPassword as forgotPasswordRequest,
   login as loginRequest,
   logout as logoutRequest,
@@ -27,6 +28,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, region: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: (currentPassword: string, confirmation: string) => Promise<void>;
   /** Dev-mode only: resolves with the reset token directly (no email service wired up yet) —
       see services/authService.ts. */
   forgotPassword: (email: string) => Promise<{ resetToken?: string }>;
@@ -106,6 +108,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     useDatasetStore.getState().clearDataset();
     useDatasetStore.getState().clearHistory();
     useChatStore.getState().clearMessages();
+  },
+
+  deleteAccount: async (currentPassword, confirmation) => {
+    set({ error: null });
+
+    try {
+      await deleteAccountRequest(currentPassword, confirmation);
+      set({ user: null, status: "unauthenticated", error: null });
+      cancelPendingSync();
+      cancelPendingChatSync();
+      useDatasetStore.getState().clearDataset();
+      useDatasetStore.getState().clearHistory();
+      useChatStore.getState().clearMessages();
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : "Failed to delete your account." });
+      throw error;
+    }
   },
 
   forgotPassword: async (email) => {
