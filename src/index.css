@@ -8,6 +8,7 @@ body,
 }
 
 html {
+  font-size: 14px !important;
   scrollbar-color: #5839b8 #0b0c16;
 }
 

@@ -48,39 +48,38 @@ function InsightsPanel() {
               )}
             </div>
 
-            {aiAnalysis.dataQuality &&
-              (aiAnalysis.dataQuality.issues.length > 0 || aiAnalysis.dataQuality.suggestions.length > 0) && (
-                <div
-                  className={`mt-6 rounded-xl border p-4 ${
-                    aiAnalysis.dataQuality.rating === "poor" ? "border-red-500/40 bg-red-500/10" : "border-amber-500/40 bg-amber-500/10"
+            {aiAnalysis.dataQuality && (aiAnalysis.dataQuality.issues.length > 0 || aiAnalysis.dataQuality.suggestions.length > 0) && (
+              <div
+                className={`mt-6 rounded-xl border p-4 ${
+                  aiAnalysis.dataQuality.rating === "poor" ? "border-red-500/40 bg-red-500/10" : "border-amber-500/40 bg-amber-500/10"
+                }`}
+              >
+                <h3
+                  className={`mb-3 flex items-center gap-1.5 text-sm font-semibold ${
+                    aiAnalysis.dataQuality.rating === "poor" ? "text-red-300" : "text-amber-300"
                   }`}
                 >
-                  <h3
-                    className={`mb-3 flex items-center gap-1.5 text-sm font-semibold ${
-                      aiAnalysis.dataQuality.rating === "poor" ? "text-red-300" : "text-amber-300"
-                    }`}
-                  >
-                    <TriangleAlert size={15} />
-                    Improve this dataset
-                  </h3>
+                  <TriangleAlert size={15} />
+                  Improve this dataset
+                </h3>
 
-                  {aiAnalysis.dataQuality.issues.length > 0 && (
-                    <ul className="space-y-1.5 text-sm text-slate-300">
-                      {aiAnalysis.dataQuality.issues.map((issue, index) => (
-                        <li key={index}>• {issue}</li>
-                      ))}
-                    </ul>
-                  )}
+                {aiAnalysis.dataQuality.issues.length > 0 && (
+                  <ul className="space-y-1.5 text-sm text-slate-300">
+                    {aiAnalysis.dataQuality.issues.map((issue, index) => (
+                      <li key={index}>• {issue}</li>
+                    ))}
+                  </ul>
+                )}
 
-                  {aiAnalysis.dataQuality.suggestions.length > 0 && (
-                    <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-sm text-slate-300">
-                      {aiAnalysis.dataQuality.suggestions.map((suggestion, index) => (
-                        <li key={index}>✓ {suggestion}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+                {aiAnalysis.dataQuality.suggestions.length > 0 && (
+                  <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-sm text-slate-300">
+                    {aiAnalysis.dataQuality.suggestions.map((suggestion, index) => (
+                      <li key={index}>✓ {suggestion}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </>
         ) : aiStatus === "loading" ? (
           <div className="flex items-center gap-2 text-sm text-slate-400">

@@ -20,13 +20,16 @@ app.set("trust proxy", 1);
 // Allow both local development and Netlify front-end origins, while still honoring a custom
 // Render-supplied CLIENT_ORIGIN for production. Requests with no Origin (curl/Postman/mobile)
 // are permitted as well, so the app works outside the browser.
-const allowedOrigins = new Set([
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://visualmindai.netlify.app",
-  "https://visualmind-ai.netlify.app",
-  process.env.CLIENT_ORIGIN,
-].filter(Boolean));
+const allowedOrigins = new Set(
+  [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://visualmindai.netlify.app",
+    "https://visualmind-ai.netlify.app",
+    "https://visualmind-ai-sable.vercel.app",
+    process.env.CLIENT_ORIGIN,
+  ].filter(Boolean),
+);
 
 app.use(
   cors({
