@@ -208,6 +208,21 @@ html[data-theme="light"] body::-webkit-scrollbar-thumb {
   background: #ffffff !important;
 }
 
+[data-theme="light"] .assistant-message {
+  color: #172033 !important;
+  background: #ffffff !important;
+  border-color: #d4deea !important;
+}
+
+[data-theme="light"] .assistant-message .text-white {
+  color: #172033 !important;
+}
+
+[data-theme="light"] .assistant-message code {
+  color: #172033 !important;
+  background: #e5eaf1 !important;
+}
+
 [data-theme="light"] .node-tooltip {
   color: #111827 !important;
   background: #ffffff !important;

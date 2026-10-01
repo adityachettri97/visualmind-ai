@@ -28,18 +28,14 @@ const markdownComponents = {
       {children}
     </a>
   ),
-  code: ({ children }: { children?: React.ReactNode }) => (
-    <code className="rounded bg-slate-900 px-1.5 py-0.5 text-xs">{children}</code>
-  ),
+  code: ({ children }: { children?: React.ReactNode }) => <code className="rounded bg-slate-900 px-1.5 py-0.5 text-xs">{children}</code>,
   table: ({ children }: { children?: React.ReactNode }) => (
     <div className="mb-2 overflow-x-auto last:mb-0">
       <table className="w-full border-collapse text-xs">{children}</table>
     </div>
   ),
   thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-900/60">{children}</thead>,
-  th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="border border-slate-700 px-2 py-1.5 text-left font-semibold">{children}</th>
-  ),
+  th: ({ children }: { children?: React.ReactNode }) => <th className="border border-slate-700 px-2 py-1.5 text-left font-semibold">{children}</th>,
   td: ({ children }: { children?: React.ReactNode }) => <td className="border border-slate-700 px-2 py-1.5 align-top">{children}</td>,
   h1: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 text-base font-bold">{children}</p>,
   h2: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 text-base font-bold">{children}</p>,
@@ -129,15 +125,13 @@ function AIAssistant() {
 
       <div className="glass flex-1 min-h-0 flex flex-col rounded-2xl p-4 sm:p-5">
         <div ref={scrollRef} className="glass-scrollbar flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
-          {messages.length === 0 && (
-            <p className="text-sm text-slate-500">No messages yet. Try asking "Which entry has the highest value?"</p>
-          )}
+          {messages.length === 0 && <p className="text-sm text-slate-500">No messages yet. Try asking "Which entry has the highest value?"</p>}
 
           {messages.map((message, index) => (
             <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-6 ${
-                  message.role === "user" ? "bg-violet-600 text-white" : "bg-slate-800/70 text-slate-200 border border-slate-700"
+                  message.role === "user" ? "bg-violet-600 text-white" : "assistant-message bg-slate-800/70 text-slate-200 border border-slate-700"
                 }`}
               >
                 {message.role === "assistant" ? (
