@@ -4,6 +4,7 @@ import { useDatasetStore } from "../../store/datasetStore";
 import { analyzeDataset } from "../../utils/analyzeDataset";
 import { analyzeWithAI } from "../../services/aiService";
 import { useScrollFade } from "../../hooks/useScrollFade";
+import { useThemeStore } from "../../store/themeStore";
 import {
   compileCalculatedFormula,
   formulaReferencesColumn,
@@ -20,17 +21,104 @@ interface ColumnDef {
 }
 
 const CALCULATED_COLUMN_EXAMPLES = [
-  { name: "Profit", formula: "[Selling Price] - [Cost]", description: "Selling price minus cost" },
-  { name: "Loss", formula: "[Cost] - [Selling Price]", description: "Positive when cost is greater than selling price" },
-  { name: "Discount Amount", formula: "[Original Price] * [Discount Rate] / 100", description: "Discount rate entered as a percentage, such as 15" },
-  { name: "Price After Discount", formula: "[Original Price] * (1 - [Discount Rate] / 100)", description: "Selling price after a percentage discount" },
-  { name: "Sales Total", formula: "[Selling Price] * [Quantity]", description: "Selling price multiplied by quantity" },
-  { name: "Total Cost", formula: "[Unit Cost] * [Quantity]", description: "Unit cost multiplied by quantity" },
-  { name: "Simple Interest", formula: "[Principal] * [Rate] * [Time] / 100", description: "Rate as a percentage; time in years" },
-  { name: "Amount With Interest", formula: "[Principal] + ([Principal] * [Rate] * [Time] / 100)", description: "Principal plus simple interest" },
+  {
+    name: "Profit per item",
+    formula: "[Selling Price] - [Unit Cost]",
+    description: "Money received for one item minus what you paid to make or buy it.",
+    columns: [
+      { key: "Selling Price", help: "The amount charged or received for one item." },
+      { key: "Unit Cost", help: "What it costs your business to make or buy one item." },
+    ],
+  },
+  {
+    name: "Total profit",
+    formula: "([Selling Price] - [Unit Cost]) * [Quantity]",
+    description: "Profit per item multiplied by the number of items sold.",
+    columns: [
+      { key: "Selling Price", help: "The amount charged or received per item." },
+      { key: "Unit Cost", help: "What it costs to make or buy one item." },
+      { key: "Quantity", help: "The number of items sold." },
+    ],
+  },
+  {
+    name: "Loss per item",
+    formula: "[Unit Cost] - [Selling Price]",
+    description: "Positive when an item costs more than it sells for; negative means the item made a profit.",
+    columns: [
+      { key: "Unit Cost", help: "What it costs your business to make or buy one item." },
+      { key: "Selling Price", help: "The amount charged or received for one item." },
+    ],
+  },
+  {
+    name: "Discount amount",
+    formula: "[Original Price] * [Discount Rate] / 100",
+    description: "The money taken off the original price. Enter a 15% discount as 15.",
+    columns: [
+      { key: "Original Price", help: "The price before the discount." },
+      { key: "Discount Rate", help: "The discount percentage, entered as a number such as 15." },
+    ],
+  },
+  {
+    name: "Price after discount",
+    formula: "[Original Price] * (1 - [Discount Rate] / 100)",
+    description: "The amount the customer pays after the percentage discount.",
+    columns: [
+      { key: "Original Price", help: "The price before the discount." },
+      { key: "Discount Rate", help: "The discount percentage, entered as a number such as 15." },
+    ],
+  },
+  {
+    name: "Sales revenue",
+    formula: "[Selling Price] * [Quantity]",
+    description: "Money received per item multiplied by the number of items sold.",
+    columns: [
+      { key: "Selling Price", help: "The amount charged or received per item." },
+      { key: "Quantity", help: "The number of items sold." },
+    ],
+  },
+  {
+    name: "Total cost",
+    formula: "[Unit Cost] * [Quantity]",
+    description: "Cost to make or buy one item multiplied by the number of items.",
+    columns: [
+      { key: "Unit Cost", help: "What it costs to make or buy one item." },
+      { key: "Quantity", help: "The number of items." },
+    ],
+  },
+  {
+    name: "Simple interest",
+    formula: "[Principal] * [Rate] * [Time] / 100",
+    description: "Interest earned or owed. Enter rate as a percentage (5 for 5%) and time in years.",
+    columns: [
+      { key: "Principal", help: "The original amount borrowed or invested." },
+      { key: "Rate", help: "Annual interest rate as a number, such as 5 for 5%." },
+      { key: "Time", help: "Time in years." },
+    ],
+  },
+  {
+    name: "Amount with simple interest",
+    formula: "[Principal] + ([Principal] * [Rate] * [Time] / 100)",
+    description: "Original amount plus simple interest. Rate is a percentage and time is in years.",
+    columns: [
+      { key: "Principal", help: "The original amount borrowed or invested." },
+      { key: "Rate", help: "Annual interest rate as a number, such as 5 for 5%." },
+      { key: "Time", help: "Time in years." },
+    ],
+  },
 ];
 
-function CalculatedColumnHelp({ onUseExample }: { onUseExample: (name: string, formula: string) => void }) {
+function CalculatedColumnHelp({
+  availableColumns,
+  onUseExample,
+}: {
+  availableColumns: string[];
+  onUseExample: (name: string, formula: string) => void;
+}) {
+  const [selectedExample, setSelectedExample] = useState<(typeof CALCULATED_COLUMN_EXAMPLES)[number] | null>(null);
+  const [columnSelections, setColumnSelections] = useState<Record<string, string>>({});
+  const isLightTheme = useThemeStore((state) => state.theme === "light");
+  const missingColumnSelection = selectedExample?.columns.some((column) => !columnSelections[column.key]) ?? false;
+
   return (
     <details className="w-full rounded-lg border border-slate-700 bg-slate-900/30 p-3">
       <summary className="cursor-pointer text-sm font-medium text-violet-300">
@@ -38,30 +126,98 @@ function CalculatedColumnHelp({ onUseExample }: { onUseExample: (name: string, f
       </summary>
       <div className="mt-3 space-y-3 text-xs leading-5 text-slate-400">
         <p>
-          Enter a new column name, then build a formula using numeric columns. Put each exact column
-          name in square brackets, such as <code className="text-slate-200">[Revenue] - [Cost]</code>.
+          A calculated column works on each row. For example, profit is usually money received from
+          selling an item minus what it cost your business to make or buy that item. Your column
+          headers may use different words, so choose which of your columns means each value.
+        </p>
+        <p>
+          To write your own formula, use numeric columns in square brackets, such as{" "}
+          <code className="text-slate-200">[Revenue] - [Cost]</code>.
           Use <code className="text-slate-200">+</code>, <code className="text-slate-200">-</code>,
           <code className="text-slate-200"> *</code>, <code className="text-slate-200"> / </code>,
           <code className="text-slate-200"> % </code>, <code className="text-slate-200"> ^ </code>,
-          and parentheses. Click an example to fill the fields, then replace its bracketed names
-          with the exact numeric column names in your dataset.
+          and parentheses. Choose an example below, match each meaning to a column in your dataset,
+          then use the generated formula.
         </p>
-        <p>Calculated values update when their source values change. Rows with missing or non-numeric inputs stay blank.</p>
+        <p>
+          Calculations need numeric values. If your dataset has a total cost or total sales column,
+          select that instead of a per-item amount; select Quantity only when the example asks for it.
+          Calculated values update when source values change. Missing or non-numeric inputs produce a blank.
+        </p>
         <ul className="grid gap-2 sm:grid-cols-2">
           {CALCULATED_COLUMN_EXAMPLES.map((example) => (
             <li key={example.name}>
               <button
                 type="button"
-                onClick={() => onUseExample(example.name, example.formula)}
-                className="w-full rounded-md border border-slate-700 px-2.5 py-2 text-left transition hover:border-violet-500 hover:bg-violet-500/10"
+                aria-pressed={selectedExample?.name === example.name}
+                onClick={() => {
+                  setSelectedExample(example);
+                  setColumnSelections({});
+                  onUseExample(example.name, example.formula);
+                }}
+                className={`w-full rounded-md border px-2.5 py-2 text-left transition ${
+                  selectedExample?.name === example.name
+                    ? "border-violet-500 bg-violet-500/10"
+                    : "border-slate-700 hover:border-violet-500 hover:bg-violet-500/10"
+                }`}
               >
-                <span className="block font-semibold text-slate-200">{example.name}</span>
-                <code className="mt-0.5 block break-words text-violet-300">{example.formula}</code>
-                <span className="mt-0.5 block">{example.description}</span>
+                <span className={`block font-semibold ${isLightTheme ? "text-black" : "text-slate-200"}`}>{example.name}</span>
+                <span className={`mt-0.5 block ${isLightTheme ? "text-slate-700" : "text-slate-400"}`}>{example.description}</span>
               </button>
             </li>
           ))}
         </ul>
+        {selectedExample && (
+          <div className="space-y-3 rounded-lg border border-slate-700 p-3">
+            <h4 className={`font-semibold ${isLightTheme ? "text-black" : "text-slate-200"}`}>Match “{selectedExample.name}” to your columns</h4>
+            {availableColumns.length > 0 ? (
+              selectedExample.columns.map((column) => (
+                <label key={column.key} className="block">
+                  <span className={`mb-1 block ${isLightTheme ? "text-black" : "text-slate-300"}`}>
+                    <span className="font-medium">{column.key}:</span> {column.help}
+                  </span>
+                  <select
+                    value={columnSelections[column.key] ?? ""}
+                    onChange={(event) =>
+                      setColumnSelections((selections) => ({ ...selections, [column.key]: event.target.value }))
+                    }
+                    className={`w-full rounded-md border px-2.5 py-2 text-sm outline-none focus:border-violet-500 ${
+                      isLightTheme
+                        ? "border-slate-400 bg-white text-black"
+                        : "border-slate-600 bg-slate-950 text-slate-100"
+                    }`}
+                  >
+                    <option value="">Choose a column...</option>
+                    {availableColumns.map((columnName) => (
+                      <option key={columnName} value={columnName}>{columnName}</option>
+                    ))}
+                  </select>
+                </label>
+              ))
+            ) : (
+              <p>Add the source columns to your table first, then choose this example again.</p>
+            )}
+            <div>
+              <span className={`block ${isLightTheme ? "text-slate-700" : "text-slate-400"}`}>Formula preview</span>
+              <code className={`mt-1 block break-words ${isLightTheme ? "text-black" : "text-violet-300"}`}>
+                {selectedExample.formula.replace(/\[([^\]]+)\]/g, (_match, key: string) =>
+                  columnSelections[key] ? `[${columnSelections[key]}]` : `[Choose ${key}]`,
+                )}
+              </code>
+            </div>
+            <button
+              type="button"
+              disabled={availableColumns.length === 0 || missingColumnSelection}
+              onClick={() => {
+                const formula = selectedExample.formula.replace(/\[([^\]]+)\]/g, (_match, key: string) => `[${columnSelections[key]}]`);
+                onUseExample(selectedExample.name, formula);
+              }}
+              className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Use this formula
+            </button>
+          </div>
+        )}
       </div>
     </details>
   );
@@ -484,7 +640,7 @@ function ManualEntry() {
             </p>
           )}
           <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
-          <CalculatedColumnHelp onUseExample={useCalculatedColumnExample} />
+          <CalculatedColumnHelp availableColumns={analysis?.columns ?? []} onUseExample={useCalculatedColumnExample} />
         </div>
 
         <div className="relative mt-4">
@@ -791,7 +947,7 @@ function ManualEntry() {
             </p>
           )}
           <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
-          <CalculatedColumnHelp onUseExample={useCalculatedColumnExample} />
+          <CalculatedColumnHelp availableColumns={columnDefs.map((column) => column.name)} onUseExample={useCalculatedColumnExample} />
         </div>
       </div>
 
