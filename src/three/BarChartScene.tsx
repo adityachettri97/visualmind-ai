@@ -1,4 +1,4 @@
-import { Text } from "@react-three/drei";
+import { Line, Text } from "@react-three/drei";
 import { useDatasetStore } from "../store/datasetStore";
 import { useNodeStore } from "../store/nodeStore";
 import { summarizeByGroup, formatValue } from "../utils/datasetToGraph";
@@ -28,6 +28,12 @@ function BarChartScene() {
 
   const maxTotal = Math.max(...groups.map((group) => group.total), 1);
   const currencySymbol = getCurrencySymbolForRegion(userRegion);
+  const baseline = -1.6;
+  const axisX = -(groups.length - 1) * 1.6 - 1.2;
+  const axisEndX = (groups.length - 1) * 1.6 + 1.2;
+  const axisZ = 1.1;
+  const axisColor = isLightTheme ? "#475569" : "#94a3b8";
+  const tickTextColor = isLightTheme ? "#0f172a" : "#cbd5e1";
 
   return (
     <group position={[0, -1.2, 0]}>
@@ -91,6 +97,52 @@ function BarChartScene() {
           </group>
         );
       })}
+      <Line points={[[axisX, baseline, axisZ], [axisEndX, baseline, axisZ]]} color={axisColor} lineWidth={1} />
+      <Line points={[[axisX, baseline, axisZ], [axisX, baseline + 7.3, axisZ]]} color={axisColor} lineWidth={1} />
+      {groups.map((group, index) => {
+        const x = (index - (groups.length - 1) / 2) * 3.2;
+
+        return (
+          <Line
+            key={group.group}
+            points={[[x, baseline - 0.12, axisZ], [x, baseline + 0.12, axisZ]]}
+            color={axisColor}
+            lineWidth={1}
+          />
+        );
+      })}
+      {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
+        const y = baseline + fraction * 7.3;
+        const value = maxTotal * fraction;
+
+        return (
+          <group key={fraction}>
+            <Line points={[[axisX - 0.12, y, axisZ], [axisX + 0.12, y, axisZ]]} color={axisColor} lineWidth={1} />
+            <Text position={[axisX - 0.25, y, axisZ]} fontSize={0.28} color={tickTextColor} anchorX="right" anchorY="middle">
+              {formatValue(analysis?.valueColumn ?? null, value)}
+            </Text>
+          </group>
+        );
+      })}
+      <Text
+        position={[axisX - 1.6, baseline + 3.65, axisZ]}
+        rotation={[0, 0, Math.PI / 2]}
+        fontSize={0.32}
+        color={tickTextColor}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {analysis?.valueColumn ?? "Value"}
+      </Text>
+      <Text
+        position={[(axisX + axisEndX) / 2, baseline - 2.45, axisZ]}
+        fontSize={0.32}
+        color={tickTextColor}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {analysis?.groupColumn ?? "Category"}
+      </Text>
     </group>
   );
 }

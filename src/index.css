@@ -98,15 +98,15 @@ html[data-theme="light"] body::-webkit-scrollbar-thumb {
   background: linear-gradient(145deg, #c7d2e1 0%, #d4dce8 52%, #c4d1df 100%) !important;
 }
 
-[data-theme="light"] .visualization-canvas > div:first-child {
+[data-theme="light"] .visualization-canvas .visualization-glow-purple {
   opacity: 0.08;
 }
 
-[data-theme="light"] .visualization-canvas > div:nth-child(2) {
+[data-theme="light"] .visualization-canvas .visualization-glow-cyan {
   opacity: 0.1;
 }
 
-[data-theme="light"] .visualization-canvas > div:nth-child(3) {
+[data-theme="light"] .visualization-canvas .visualization-grid {
   opacity: 0.12;
 }
 

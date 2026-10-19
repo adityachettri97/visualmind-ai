@@ -18,7 +18,7 @@ function InsightsPanel() {
   };
 
   return (
-    <motion.div variants={slideRight} initial="hidden" animate="visible" className="w-full shrink-0 lg:w-[19rem] xl:w-[20rem] flex flex-col gap-3">
+    <motion.div data-tour="ai-insights" variants={slideRight} initial="hidden" animate="visible" className="w-full shrink-0 lg:w-[19rem] xl:w-[20rem] flex flex-col gap-3">
       <div className="rounded-2xl border border-slate-700 bg-[#0B1220] p-4">
         <h2 className="glass glass-hover p-3 text-xl font-bold mb-4">AI Insights</h2>
 

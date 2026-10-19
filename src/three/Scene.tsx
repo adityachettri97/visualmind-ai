@@ -40,7 +40,6 @@ function Scene({ barMode = false }: SceneProps) {
         dampingFactor={0.08}
         zoomSpeed={1.1}
         minDistance={2.5}
-        maxDistance={60}
         mouseButtons={{ MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
       />
 

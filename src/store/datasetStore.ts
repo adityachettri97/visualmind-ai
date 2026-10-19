@@ -31,6 +31,7 @@ interface DatasetState {
   history: DatasetHistoryEntry[];
 
   setDataset: (data: Record<string, string>[], fileName: string, analysis: DatasetAnalysis, calculatedColumns?: CalculatedColumns) => void;
+  renameDataset: (fileName: string) => void;
   /** Appends rows to the currently active dataset in place — for logging new data over time,
       as opposed to `setDataset`, which switches to a different dataset entirely. */
   appendRows: (rows: Record<string, string>[]) => void;
@@ -41,6 +42,10 @@ interface DatasetState {
   /** Adds a new (initially blank) column to every row of the currently active dataset. No-op if
       the name is blank or already used. */
   addColumn: (columnName: string) => void;
+  /** Renames a column and updates references to it in calculated-column formulas. */
+  renameColumn: (columnName: string, newName: string) => void;
+  /** Moves a column to a new position without changing its values. */
+  reorderColumns: (columnName: string, targetColumnName: string) => void;
   addCalculatedColumn: (columnName: string, formula: string) => void;
   /** Removes a column from every row of the currently active dataset. No-op if it's the only
       column left, since a dataset with rows but no columns can't render meaningfully. */
@@ -112,6 +117,12 @@ export const useDatasetStore = create<DatasetState>()(
           };
         }),
 
+      renameDataset: (fileName) => {
+        const trimmedName = fileName.trim();
+
+        if (trimmedName) set({ fileName: trimmedName });
+      },
+
       appendRows: (rows) =>
         set((state) => {
           const data = recalculateCalculatedColumns([...state.data, ...rows], state.calculatedColumns);
@@ -151,6 +162,62 @@ export const useDatasetStore = create<DatasetState>()(
             state.data.map((row) => ({ ...row, [trimmed]: "" })),
             state.calculatedColumns,
           );
+
+          return { data, analysis: analyzeDataset(data) };
+        }),
+
+      renameColumn: (columnName, newName) =>
+        set((state) => {
+          const trimmedName = newName.trim();
+
+          if (
+            !trimmedName ||
+            trimmedName === columnName ||
+            !state.analysis?.columns.includes(columnName) ||
+            state.analysis.columns.includes(trimmedName)
+          ) {
+            return state;
+          }
+
+          const data = state.data.map((row) =>
+            Object.fromEntries(Object.entries(row).map(([key, value]) => [key === columnName ? trimmedName : key, value])),
+          );
+          const calculatedColumns = Object.fromEntries(
+            Object.entries(state.calculatedColumns).map(([name, formula]) => [
+              name === columnName ? trimmedName : name,
+              formula.replace(/\[([^\]]+)\]/g, (match, reference: string) =>
+                reference.trim() === columnName ? `[${trimmedName}]` : match,
+              ),
+            ]),
+          );
+          const recalculatedData = recalculateCalculatedColumns(data, calculatedColumns);
+
+          return {
+            data: recalculatedData,
+            analysis: analyzeDataset(recalculatedData),
+            calculatedColumns,
+            aiAnalysis: null,
+            aiStatus: "idle",
+            aiError: null,
+          };
+        }),
+
+      reorderColumns: (columnName, targetColumnName) =>
+        set((state) => {
+          const columns = state.analysis?.columns ?? [];
+          const sourceIndex = columns.indexOf(columnName);
+          const targetIndex = columns.indexOf(targetColumnName);
+
+          if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return state;
+
+          const reorderedColumns = [...columns];
+          reorderedColumns.splice(sourceIndex, 1);
+          reorderedColumns.splice(targetIndex, 0, columnName);
+
+          const orderedData = state.data.map((row) =>
+            Object.fromEntries(reorderedColumns.map((column) => [column, row[column] ?? ""])),
+          );
+          const data = recalculateCalculatedColumns(orderedData, state.calculatedColumns);
 
           return { data, analysis: analyzeDataset(data) };
         }),

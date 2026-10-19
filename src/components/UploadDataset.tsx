@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, GripVertical, Pencil, Trash2, X } from "lucide-react";
 import { analyzeDataset } from "../utils/analyzeDataset";
 import { useDatasetStore } from "../store/datasetStore";
 import { analyzeWithAI } from "../services/aiService";
@@ -25,9 +25,30 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 function UploadDataset() {
-  const { data, fileName, analysis, history, setDataset, setAIAnalysis, setAILoading, setAIError, loadFromHistory, removeFromHistory } =
-    useDatasetStore();
+  const {
+    data,
+    fileName,
+    analysis,
+    history,
+    setDataset,
+    setAIAnalysis,
+    setAILoading,
+    setAIError,
+    renameDataset,
+    renameColumn,
+    reorderColumns,
+    loadFromHistory,
+    removeFromHistory,
+  } = useDatasetStore();
   const [mode, setMode] = useState<"upload" | "create" | "generate">("upload");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isRenamingDataset, setIsRenamingDataset] = useState(false);
+  const [datasetNameDraft, setDatasetNameDraft] = useState("");
+  const [datasetRenameError, setDatasetRenameError] = useState<string | null>(null);
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const modeToggleRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
@@ -35,37 +56,98 @@ function UploadDataset() {
   useArrowKeyNav(modeToggleRef, { orientation: "horizontal" });
   useArrowKeyNav(historyRef, { orientation: "both" });
   const { showStartFade: previewShowStartFade, showEndFade: previewShowEndFade } = useScrollFade(previewScrollRef);
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  function loadRows(rows: Record<string, string>[], name: string) {
+    if (rows.length === 0 || Object.keys(rows[0]).length === 0) {
+      setUploadError("The selected file does not contain a data table with rows and column headers.");
+      return;
+    }
+
+    setUploadError(null);
+    setDataset(rows, name, analyzeDataset(rows));
+    setAILoading();
+
+    analyzeWithAI(rows)
+      .then((result) => {
+        setAIAnalysis(result);
+      })
+      .catch((error) => {
+        console.error("===== GROQ AI ERROR =====");
+        console.error(error);
+
+        setAIError(error instanceof Error ? error.message : "Failed to analyze dataset with AI.");
+      });
+  }
+
+  function saveDatasetName() {
+    const trimmedName = datasetNameDraft.trim();
+
+    if (!trimmedName) {
+      setDatasetRenameError("Dataset name cannot be blank.");
+      return;
+    }
+
+    const currentExtension = fileName?.match(/\.[^.]+$/)?.[0] ?? "";
+    const nextName = trimmedName.includes(".") || !currentExtension ? trimmedName : `${trimmedName}${currentExtension}`;
+    renameDataset(nextName);
+    setIsRenamingDataset(false);
+    setDatasetRenameError(null);
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    const input = event.currentTarget;
 
     if (!file) return;
 
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
+    input.value = "";
+    setUploadError(null);
 
-      complete: (results) => {
-        const analysis = analyzeDataset(results.data);
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension === "csv") {
+      Papa.parse<Record<string, string>>(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.errors.length > 0) {
+            setUploadError(`Could not parse CSV: ${results.errors[0].message}`);
+            return;
+          }
 
-        setDataset(results.data, file.name, analysis);
-        setAILoading();
+          loadRows(results.data, file.name);
+        },
+        error: (error) => {
+          console.error("CSV parsing error:", error);
+          setUploadError(`Could not parse CSV: ${error.message}`);
+        },
+      });
+      return;
+    }
 
-        analyzeWithAI(results.data)
-          .then((result) => {
-            setAIAnalysis(result);
-          })
-          .catch((error) => {
-            console.error("===== GROQ AI ERROR =====");
-            console.error(error);
+    if (["xlsx", "xls", "xlsm", "xlsb"].includes(extension ?? "")) {
+      try {
+        const XLSX = await import("@e965/xlsx");
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
 
-            setAIError(error instanceof Error ? error.message : "Failed to analyze dataset with AI.");
-          });
-      },
+        if (!firstSheetName) {
+          setUploadError("The Excel workbook does not contain any worksheets.");
+          return;
+        }
 
-      error: (error) => {
-        console.error("CSV parsing error:", error);
-      },
-    });
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "", raw: false }).map((row) =>
+          Object.fromEntries(Object.entries(row).map(([column, value]) => [column, String(value)])),
+        );
+
+        loadRows(rows, file.name);
+      } catch (error) {
+        console.error("Excel parsing error:", error);
+        setUploadError(error instanceof Error ? `Could not read Excel file: ${error.message}` : "Could not read Excel file.");
+      }
+      return;
+    }
+
+    setUploadError("Unsupported file type. Choose CSV or Excel (.xlsx/.xls/.xlsm/.xlsb).");
   };
 
   return (
@@ -107,18 +189,26 @@ function UploadDataset() {
         <div className="glass rounded-2xl p-4 sm:p-6">
           <h2 className="text-xl font-semibold">Upload Dataset</h2>
 
-          <p className="mt-2 text-sm text-slate-400">Upload a CSV file to analyze your data.</p>
+          <p className="mt-2 text-sm text-slate-400">
+            Upload a CSV or Excel spreadsheet to create a dataset.
+          </p>
 
           {/* Upload Area */}
           <label className="mt-6 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-600 p-6 sm:p-8 transition hover:border-violet-400">
             <div className="text-center">
-              <p className="font-medium">Click to upload CSV</p>
+              <p className="font-medium">Click to upload a file</p>
 
-              <p className="mt-1 text-sm text-slate-500">CSV files only</p>
+              <p className="mt-1 text-sm text-slate-500">CSV or Excel (.xlsx/.xls/.xlsm/.xlsb)</p>
             </div>
 
-            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls,.xlsm,.xlsb"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
           </label>
+          {uploadError && <p role="alert" className="mt-3 text-sm text-red-400">{uploadError}</p>}
         </div>
       ) : mode === "create" ? (
         <ManualEntry />
@@ -171,9 +261,58 @@ function UploadDataset() {
       {/* Selected File */}
       {fileName && (
         <div className="mt-4">
-          <p className="text-sm text-slate-400">Selected file:</p>
-
-          <p className="font-medium">{fileName}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <p className="text-sm text-slate-400">Dataset name</p>
+              {isRenamingDataset ? (
+                <input
+                  autoFocus
+                  aria-label="Dataset name"
+                  value={datasetNameDraft}
+                  onChange={(event) => setDatasetNameDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") saveDatasetName();
+                    if (event.key === "Escape") setIsRenamingDataset(false);
+                  }}
+                  className="mt-1 rounded border border-violet-500 bg-slate-950 px-2 py-1 font-medium text-white outline-none"
+                />
+              ) : (
+                <p className="font-medium">{fileName}</p>
+              )}
+            </div>
+            {isRenamingDataset ? (
+              <>
+                <button type="button" onClick={saveDatasetName} aria-label="Save dataset name" className="text-emerald-400 hover:text-emerald-300">
+                  <Check size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRenamingDataset(false);
+                    setDatasetRenameError(null);
+                  }}
+                  aria-label="Cancel dataset rename"
+                  className="text-slate-500 hover:text-white"
+                >
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setDatasetNameDraft(fileName);
+                  setIsRenamingDataset(true);
+                  setDatasetRenameError(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:border-violet-500 hover:text-white"
+              >
+                <Pencil size={14} />
+                Rename dataset
+              </button>
+            )}
+          </div>
+          {datasetRenameError && <p role="alert" className="mt-2 text-sm text-red-400">{datasetRenameError}</p>}
         </div>
       )}
 
@@ -190,9 +329,138 @@ function UploadDataset() {
             <table className="w-full text-sm">
               <thead className="bg-slate-800/60">
                 <tr>
-                  {Object.keys(data[0]).map((column) => (
-                    <th key={column} className="px-4 py-3 text-left font-semibold text-slate-300">
-                      {column}
+                  {Object.keys(data[0]).map((column, columnIndex, columns) => (
+                    <th
+                      key={column}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const sourceColumn = event.dataTransfer.getData("text/plain") || draggedColumn;
+
+                        if (sourceColumn) reorderColumns(sourceColumn, column);
+                        setDraggedColumn(null);
+                      }}
+                      className={`px-4 py-3 text-left font-semibold text-slate-300 ${draggedColumn === column ? "opacity-50" : ""}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.setData("text/plain", column);
+                            event.dataTransfer.effectAllowed = "move";
+                            setDraggedColumn(column);
+                          }}
+                          onDragEnd={() => setDraggedColumn(null)}
+                          aria-label={`Drag to move column ${column}`}
+                          title="Drag to reorder column"
+                          className="cursor-grab text-slate-500 hover:text-violet-300 active:cursor-grabbing"
+                        >
+                          <GripVertical size={14} />
+                        </button>
+                        <span className="flex shrink-0 items-center gap-0.5 sm:hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const previousColumn = columns[columnIndex - 1];
+                              if (previousColumn) reorderColumns(column, previousColumn);
+                            }}
+                            disabled={columnIndex === 0}
+                            aria-label={`Move column ${column} left`}
+                            className="rounded p-1 text-slate-400 transition hover:bg-violet-500/15 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowLeft size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextColumn = columns[columnIndex + 1];
+                              if (nextColumn) reorderColumns(column, nextColumn);
+                            }}
+                            disabled={columnIndex === columns.length - 1}
+                            aria-label={`Move column ${column} right`}
+                            className="rounded p-1 text-slate-400 transition hover:bg-violet-500/15 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowRight size={14} />
+                          </button>
+                        </span>
+                        {renamingColumn === column ? (
+                          <>
+                            <input
+                              autoFocus
+                              aria-label={`Rename column ${column}`}
+                              value={renameDraft}
+                              onChange={(event) => setRenameDraft(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  const nextName = renameDraft.trim();
+                                  if (!nextName) {
+                                    setRenameError("Column name cannot be blank.");
+                                  } else if (nextName !== column && Object.keys(data[0]).includes(nextName)) {
+                                    setRenameError(`A column named "${nextName}" already exists.`);
+                                  } else {
+                                    renameColumn(column, nextName);
+                                    setRenamingColumn(null);
+                                    setRenameError(null);
+                                  }
+                                }
+                                if (event.key === "Escape") {
+                                  setRenamingColumn(null);
+                                  setRenameError(null);
+                                }
+                              }}
+                              className="w-32 rounded border border-violet-500 bg-slate-950 px-2 py-1 text-sm font-normal text-white outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextName = renameDraft.trim();
+                                if (!nextName) {
+                                  setRenameError("Column name cannot be blank.");
+                                } else if (nextName !== column && Object.keys(data[0]).includes(nextName)) {
+                                  setRenameError(`A column named "${nextName}" already exists.`);
+                                } else {
+                                  renameColumn(column, nextName);
+                                  setRenamingColumn(null);
+                                  setRenameError(null);
+                                }
+                              }}
+                              aria-label={`Save column name ${renameDraft}`}
+                              className="text-emerald-400 hover:text-emerald-300"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRenamingColumn(null);
+                                setRenameError(null);
+                              }}
+                              aria-label="Cancel column rename"
+                              className="text-slate-500 hover:text-white"
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span>{column}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRenamingColumn(column);
+                                setRenameDraft(column);
+                                setRenameError(null);
+                              }}
+                              aria-label={`Rename column ${column}`}
+                              title={`Rename ${column}`}
+                              className="text-slate-500 hover:text-violet-300"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -221,6 +489,9 @@ function UploadDataset() {
               <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-xl bg-linear-to-l from-slate-900/90 to-transparent" />
             )}
           </div>
+
+          {renameError && <p role="alert" className="mt-2 text-sm text-red-400">{renameError}</p>}
+          <p className="mt-2 text-xs text-slate-500">Drag a column by its grip, or use the arrows on mobile to change its position. Rename columns with the pencil icon.</p>
 
           {data.length > 10 && <p className="mt-2 text-xs text-slate-500">Showing first 10 rows of {data.length}.</p>}
         </div>

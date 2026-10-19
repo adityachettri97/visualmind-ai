@@ -1,5 +1,10 @@
 # React + TypeScript + Vite
 
+## Dataset uploads
+
+Upload CSV or Excel spreadsheets (`.xlsx`, `.xls`, `.xlsm`, `.xlsb`) to create a dataset. Use the
+**Rename dataset** button below the upload panel to change the active dataset name.
+
 ## Mobile Apps
 
 The project uses Capacitor to package the web app for Android and iOS. The current app ID is

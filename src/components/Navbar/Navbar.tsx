@@ -7,6 +7,7 @@ import { usePageStore } from "../../store/pageStore";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import DatasetSearch from "./DatasetSearch";
 import UserMenu from "./UserMenu";
+import TutorialGuide from "./TutorialGuide";
 
 function Navbar() {
   const { isCollapsed, toggleSidebar, isMobileOpen, toggleMobileSidebar } = useSidebarStore();
@@ -44,7 +45,9 @@ function Navbar() {
 
       {/* Right Section */}
       <div className="flex items-center gap-2 sm:gap-5">
+        <TutorialGuide />
         <motion.button
+          data-tour="ask-ai"
           onClick={() => setActivePage("assistant")}
           whileHover={{
             scale: 1.05,

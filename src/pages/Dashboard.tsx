@@ -26,8 +26,9 @@ function Dashboard() {
           {activePage === "dashboard" && (
             <>
               <div className="contents lg:flex lg:flex-1 lg:flex-row lg:items-stretch lg:gap-4">
-                <div className="order-1 lg:order-none lg:min-w-0 lg:flex-[1.7_1_0%]">
+                <div className="order-1 flex flex-col gap-3 lg:order-none lg:min-w-0 lg:flex-[1.7_1_0%]">
                   <ThreeCanvas />
+                  <VisualizationModes />
                 </div>
 
                 <InfoPanel />
@@ -35,10 +36,6 @@ function Dashboard() {
                 <div className="order-3 lg:order-none">
                   <InsightsPanel />
                 </div>
-              </div>
-
-              <div className="order-2 lg:order-none">
-                <VisualizationModes />
               </div>
             </>
           )}

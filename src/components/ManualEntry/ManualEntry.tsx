@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Calculator, FilePlus2, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Check, FilePlus2, GripVertical, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useDatasetStore } from "../../store/datasetStore";
 import { analyzeDataset } from "../../utils/analyzeDataset";
 import { analyzeWithAI } from "../../services/aiService";
@@ -19,6 +19,54 @@ interface ColumnDef {
   formula?: string;
 }
 
+const CALCULATED_COLUMN_EXAMPLES = [
+  { name: "Profit", formula: "[Selling Price] - [Cost]", description: "Selling price minus cost" },
+  { name: "Loss", formula: "[Cost] - [Selling Price]", description: "Positive when cost is greater than selling price" },
+  { name: "Discount Amount", formula: "[Original Price] * [Discount Rate] / 100", description: "Discount rate entered as a percentage, such as 15" },
+  { name: "Price After Discount", formula: "[Original Price] * (1 - [Discount Rate] / 100)", description: "Selling price after a percentage discount" },
+  { name: "Sales Total", formula: "[Selling Price] * [Quantity]", description: "Selling price multiplied by quantity" },
+  { name: "Total Cost", formula: "[Unit Cost] * [Quantity]", description: "Unit cost multiplied by quantity" },
+  { name: "Simple Interest", formula: "[Principal] * [Rate] * [Time] / 100", description: "Rate as a percentage; time in years" },
+  { name: "Amount With Interest", formula: "[Principal] + ([Principal] * [Rate] * [Time] / 100)", description: "Principal plus simple interest" },
+];
+
+function CalculatedColumnHelp({ onUseExample }: { onUseExample: (name: string, formula: string) => void }) {
+  return (
+    <details className="w-full rounded-lg border border-slate-700 bg-slate-900/30 p-3">
+      <summary className="cursor-pointer text-sm font-medium text-violet-300">
+        How to use calculated columns
+      </summary>
+      <div className="mt-3 space-y-3 text-xs leading-5 text-slate-400">
+        <p>
+          Enter a new column name, then build a formula using numeric columns. Put each exact column
+          name in square brackets, such as <code className="text-slate-200">[Revenue] - [Cost]</code>.
+          Use <code className="text-slate-200">+</code>, <code className="text-slate-200">-</code>,
+          <code className="text-slate-200"> *</code>, <code className="text-slate-200"> / </code>,
+          <code className="text-slate-200"> % </code>, <code className="text-slate-200"> ^ </code>,
+          and parentheses. Click an example to fill the fields, then replace its bracketed names
+          with the exact numeric column names in your dataset.
+        </p>
+        <p>Calculated values update when their source values change. Rows with missing or non-numeric inputs stay blank.</p>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {CALCULATED_COLUMN_EXAMPLES.map((example) => (
+            <li key={example.name}>
+              <button
+                type="button"
+                onClick={() => onUseExample(example.name, example.formula)}
+                className="w-full rounded-md border border-slate-700 px-2.5 py-2 text-left transition hover:border-violet-500 hover:bg-violet-500/10"
+              >
+                <span className="block font-semibold text-slate-200">{example.name}</span>
+                <code className="mt-0.5 block break-words text-violet-300">{example.formula}</code>
+                <span className="mt-0.5 block">{example.description}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+  );
+}
+
 const TYPE_LABELS: Record<ColumnType, string> = {
   text: "Text",
   number: "Number",
@@ -32,10 +80,13 @@ function ManualEntry() {
     analysis,
     calculatedColumns,
     setDataset,
+    renameDataset,
     appendRows,
     updateCell,
     deleteRow,
     addColumn: addColumnToDataset,
+    renameColumn: renameColumnInDataset,
+    reorderColumns,
     addCalculatedColumn: addCalculatedColumnToDataset,
     deleteColumn: deleteColumnFromDataset,
     setAILoading,
@@ -63,6 +114,12 @@ function ManualEntry() {
 
   // Editing state — used once a dataset is already active.
   const [editColumnName, setEditColumnName] = useState("");
+  const [isRenamingDataset, setIsRenamingDataset] = useState(false);
+  const [datasetNameDraft, setDatasetNameDraft] = useState("");
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [columnRenameError, setColumnRenameError] = useState<string | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
 
   // Shared by both tables below (only one is ever mounted at a time) — lets arrow keys move
   // between cells like a spreadsheet, via each cell's data-row/data-col attributes.
@@ -198,6 +255,12 @@ function ManualEntry() {
     }
   }
 
+  function useCalculatedColumnExample(name: string, formula: string) {
+    setNewCalculatedColumnName(name);
+    setNewCalculatedFormula(formula);
+    setCalculatedColumnError(null);
+  }
+
   function handleSaveTable() {
     if (columnDefs.length === 0) {
       setSaveError("Add at least one column first.");
@@ -260,6 +323,44 @@ function ManualEntry() {
     setEditColumnName("");
   }
 
+  function beginRenameColumn(column: string) {
+    setRenamingColumn(column);
+    setRenameDraft(column);
+    setColumnRenameError(null);
+  }
+
+  function saveColumnRename() {
+    if (!renamingColumn) return;
+
+    const trimmedName = renameDraft.trim();
+
+    if (!trimmedName) {
+      setColumnRenameError("Column name cannot be blank.");
+      return;
+    }
+
+    if (trimmedName !== renamingColumn && analysis?.columns.includes(trimmedName)) {
+      setColumnRenameError(`A column named "${trimmedName}" already exists.`);
+      return;
+    }
+
+    renameColumnInDataset(renamingColumn, trimmedName);
+    setRenamingColumn(null);
+    setRenameDraft("");
+    setColumnRenameError(null);
+  }
+
+  function saveDatasetRename() {
+    const trimmedName = datasetNameDraft.trim();
+
+    if (!trimmedName) return;
+
+    const currentExtension = fileName?.match(/\.[^.]+$/)?.[0] ?? "";
+    const nextName = trimmedName.includes(".") || !currentExtension ? trimmedName : `${trimmedName}${currentExtension}`;
+    renameDataset(nextName);
+    setIsRenamingDataset(false);
+  }
+
   if (!showBuilder) {
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
@@ -268,7 +369,42 @@ function ManualEntry() {
             <h2 className="text-xl font-semibold">Create Dataset</h2>
 
             <p className="mt-2 text-sm text-slate-400">
-              Editing &quot;{fileName}&quot; — edit any cell, add or remove columns and rows. Changes save instantly.
+              {isRenamingDataset ? (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <input
+                    autoFocus
+                    aria-label="Dataset name"
+                    value={datasetNameDraft}
+                    onChange={(event) => setDatasetNameDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") saveDatasetRename();
+                      if (event.key === "Escape") setIsRenamingDataset(false);
+                    }}
+                    className="rounded border border-violet-500 bg-slate-950 px-2 py-1 text-sm text-white outline-none"
+                  />
+                  <button type="button" onClick={saveDatasetRename} aria-label="Save dataset name" className="text-emerald-400 hover:text-emerald-300">
+                    <Check size={15} />
+                  </button>
+                  <button type="button" onClick={() => setIsRenamingDataset(false)} aria-label="Cancel dataset rename" className="text-slate-500 hover:text-white">
+                    <X size={15} />
+                  </button>
+                </span>
+              ) : (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  Editing &quot;{fileName}&quot; — edit any cell, add or remove columns and rows. Changes save instantly.
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDatasetNameDraft(fileName ?? "");
+                      setIsRenamingDataset(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-violet-500 hover:text-white"
+                  >
+                    <Pencil size={14} />
+                    Rename dataset
+                  </button>
+                </span>
+              )}
             </p>
           </div>
 
@@ -348,6 +484,7 @@ function ManualEntry() {
             </p>
           )}
           <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
+          <CalculatedColumnHelp onUseExample={useCalculatedColumnExample} />
         </div>
 
         <div className="relative mt-4">
@@ -355,11 +492,108 @@ function ManualEntry() {
             <table ref={tableRef} className="w-full text-sm">
               <thead className="bg-slate-800/60">
                 <tr>
-                  {analysis.columns.map((column) => (
-                    <th key={column} className="px-3 py-2 text-left font-semibold text-slate-300">
+                  {analysis.columns.map((column, columnIndex) => (
+                    <th
+                      key={column}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const sourceColumn = event.dataTransfer.getData("text/plain") || draggedColumn;
+
+                        if (sourceColumn) reorderColumns(sourceColumn, column);
+                        setDraggedColumn(null);
+                      }}
+                      className={`px-3 py-2 text-left font-semibold text-slate-300 ${draggedColumn === column ? "opacity-50" : ""}`}
+                    >
                       <div className="flex items-center gap-1.5">
-                        <span title={calculatedColumns[column] ? `Formula: ${calculatedColumns[column]}` : undefined}>{column}</span>
-                        {calculatedColumns[column] && <span className="text-[10px] text-violet-300">ƒx</span>}
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.setData("text/plain", column);
+                            event.dataTransfer.effectAllowed = "move";
+                            setDraggedColumn(column);
+                          }}
+                          onDragEnd={() => setDraggedColumn(null)}
+                          aria-label={`Drag to move column ${column}`}
+                          title="Drag to reorder column"
+                          className="cursor-grab text-slate-500 hover:text-violet-300 active:cursor-grabbing"
+                        >
+                          <GripVertical size={14} />
+                        </button>
+                        <span className="flex shrink-0 items-center gap-0.5 sm:hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const previousColumn = analysis.columns[columnIndex - 1];
+                              if (previousColumn) reorderColumns(column, previousColumn);
+                            }}
+                            disabled={columnIndex === 0}
+                            aria-label={`Move column ${column} left`}
+                            className="rounded p-1 text-slate-400 transition hover:bg-violet-500/15 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowLeft size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextColumn = analysis.columns[columnIndex + 1];
+                              if (nextColumn) reorderColumns(column, nextColumn);
+                            }}
+                            disabled={columnIndex === analysis.columns.length - 1}
+                            aria-label={`Move column ${column} right`}
+                            className="rounded p-1 text-slate-400 transition hover:bg-violet-500/15 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowRight size={14} />
+                          </button>
+                        </span>
+
+                        {renamingColumn === column ? (
+                          <>
+                            <input
+                              autoFocus
+                              aria-label={`Rename column ${column}`}
+                              value={renameDraft}
+                              onChange={(event) => setRenameDraft(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") saveColumnRename();
+                                if (event.key === "Escape") {
+                                  setRenamingColumn(null);
+                                  setColumnRenameError(null);
+                                }
+                              }}
+                              className="w-32 rounded border border-violet-500 bg-slate-950 px-2 py-1 text-sm font-normal text-white outline-none"
+                            />
+                            <button type="button" onClick={saveColumnRename} aria-label={`Save column name ${renameDraft}`} className="text-emerald-400 hover:text-emerald-300">
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRenamingColumn(null);
+                                setColumnRenameError(null);
+                              }}
+                              aria-label="Cancel column rename"
+                              className="text-slate-500 hover:text-white"
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span title={calculatedColumns[column] ? `Formula: ${calculatedColumns[column]}` : undefined}>{column}</span>
+                            {calculatedColumns[column] && <span className="text-[10px] text-violet-300">ƒx</span>}
+                            <button
+                              type="button"
+                              onClick={() => beginRenameColumn(column)}
+                              aria-label={`Rename column ${column}`}
+                              title={`Rename ${column}`}
+                              className="text-slate-500 hover:text-violet-300"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          </>
+                        )}
 
                         <button
                           type="button"
@@ -557,8 +791,12 @@ function ManualEntry() {
             </p>
           )}
           <p className="w-full text-xs text-slate-500">Use column names in brackets and +, -, *, /, %, ^, and parentheses.</p>
+          <CalculatedColumnHelp onUseExample={useCalculatedColumnExample} />
         </div>
       </div>
+
+      {columnRenameError && <p role="alert" className="mt-2 text-sm text-red-400">{columnRenameError}</p>}
+      <p className="mt-2 text-xs text-slate-500">Drag a column by its grip, or use the arrows on mobile to change its position. Rename columns with the pencil icon.</p>
 
       {columnDefs.length > 0 && (
         <div className="mt-6">

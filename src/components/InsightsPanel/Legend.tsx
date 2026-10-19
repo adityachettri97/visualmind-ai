@@ -1,17 +1,39 @@
 import { useDatasetStore } from "../../store/datasetStore";
 import { getColorForIndex } from "../../utils/colors";
+import { useVisualizationStore } from "../../store/visualizationStore";
 
 function Legend() {
   const { data, analysis } = useDatasetStore();
+  const { dimension, twoDMode, mode } = useVisualizationStore();
 
   if (!data || data.length === 0 || !analysis) return null;
+
+  const chartGuidance = {
+    bar: `Bar height shows the total ${analysis.valueColumn ?? "value"} for each ${analysis.groupColumn ?? "category"}. Read labels along the bottom and compare bar heights.`,
+    horizontalBar: `Bar length shows the total ${analysis.valueColumn ?? "value"} for each ${analysis.groupColumn ?? "category"}. Read labels on the left and compare bar lengths.`,
+    line: `Each point shows ${analysis.valueColumn ?? "value"} for a ${analysis.groupColumn ?? "category"}. The horizontal axis follows category order; the vertical axis shows the value. The connecting line helps show the trend.`,
+    donut: `Each colored slice represents a ${analysis.groupColumn ?? "category"}. Its share of the whole is shown as a percentage in the legend.`,
+    scatter: `Each dot is a row. The horizontal axis is ${analysis.numericColumns[0] ?? "the first numeric column"} and the vertical axis is ${analysis.numericColumns[1] ?? "the second numeric column"}. Dots close together have similar values.`,
+    heatmap: `Each tile is a record. Tile color intensity represents ${analysis.valueColumn ?? "value"}; the label identifies the ${analysis.labelColumn ?? "record"}.`,
+    treemap: `Each rectangle represents a ${analysis.labelColumn ?? "record"}, grouped by ${analysis.groupColumn ?? "category"}. Larger rectangles represent higher ${analysis.valueColumn ?? "values"}.`,
+  };
+
+  if (dimension === "2d") {
+    return (
+      <div className="mt-6 border-t border-slate-700 pt-5">
+        <h3 className="mb-2 text-sm font-semibold text-violet-300">How to read this chart</h3>
+        <p className="text-xs leading-5 text-slate-300">{chartGuidance[twoDMode]}</p>
+        <p className="mt-2 text-xs text-slate-500">Hover over or focus a data mark for its exact values.</p>
+      </div>
+    );
+  }
 
   const groupColumn = analysis.groupColumn;
   const groups = groupColumn ? Array.from(new Set(data.map((row) => row[groupColumn] || "Unknown"))) : [];
 
   return (
     <div className="mt-6 border-t border-slate-700 pt-5">
-      <h3 className="text-sm font-semibold text-violet-300 mb-3">How to read the graph</h3>
+      <h3 className="text-sm font-semibold text-violet-300 mb-3">How to read the 3D graph ({mode})</h3>
 
       <div className="space-y-4 text-slate-300">
         <div>
